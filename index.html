@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cylinder Shot Peening Coverage Simulator</title>
+<meta name="description" content="Interactive educational simulator of shot peening coverage on a rotating cylinder: helical pattern, pitch, back-and-forth passes, curvature of the surface and stripe analysis.">
+<meta name="author" content="Dr Régis Kubler, Arts et Métiers Institute of Technology">
+<meta property="og:title" content="Cylinder Shot Peening Coverage Simulator">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5a96'/%3E%3Crect x='10' y='20' width='44' height='24' rx='4' fill='%23c9d2dc'/%3E%3Cpath d='M16 20l10 24M28 20l10 24M40 20l10 24' stroke='%23f08a4b' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: test bench — rotating cylinder (full width), unrolled surface map + axial cross-section and readouts, then theory charts, then parameters and calculation chain */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --ink:#17202a; --muted:#5b6672; --line:#d3d9df;
+  --accent:#d4621c; --theory:#1f5a96; --bare:#e5484d; --soft:#f6f8fa; --alt:#2e8b57;
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --surface:#19212a; --ink:#e6ebf0; --muted:#9aa6b2; --line:#2b3642;
+  --accent:#f08a4b; --theory:#6aa7e6; --bare:#ff6b6f; --soft:#1e2731; --alt:#5cc08a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --surface:#19212a; --ink:#e6ebf0; --muted:#9aa6b2; --line:#2b3642;
+  --accent:#f08a4b; --theory:#6aa7e6; --bare:#ff6b6f; --soft:#1e2731; --alt:#5cc08a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:20px 40px;margin:0}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.hero{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.hero .htext{flex:1 1 420px;min-width:0}
+.hgif{flex:0 0 auto;width:min(280px,100%);margin:0}
+.hgif img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line)}
+@media (max-width:720px){.hgif{order:-1;width:min(340px,100%)}}
+header h1{font-family:var(--f-display);font-weight:800;font-size:clamp(1.5rem,3vw,2.1rem);letter-spacing:-.01em;margin:0;text-wrap:balance}
+header p{margin:.3rem 0 0;color:var(--muted);max-width:80ch}
+header p.byline{margin:0 0 .35rem;font-size:13px}
+header p.byline b{color:var(--ink);font-weight:600}
+.formula{font-family:var(--f-mono);color:var(--ink);white-space:nowrap}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+button{font:600 14px var(--f-body);border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:8px;padding:7px 13px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;min-width:7.5em}
+select{font:500 14px var(--f-body);background:var(--soft);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.bar label{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.bar .sep{flex:1}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.panel h2{font-family:var(--f-display);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+canvas{display:block;width:100%;border-radius:6px;max-width:100%}
+#map{cursor:crosshair}
+.phase{font-size:14px;min-height:3em;background:var(--soft);border-radius:8px;padding:8px 10px}
+.phase b{color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);align-items:center}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.reads{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.read{background:var(--soft);border-radius:8px;padding:8px 10px}
+.read .k{font-size:12px;color:var(--muted);line-height:1.3}
+.read .v{font-family:var(--f-mono);font-size:17px;font-weight:500;font-variant-numeric:tabular-nums}
+.read.hl .v{color:var(--accent)}
+.read.th .v{color:var(--theory)}
+.read.avg .v{color:var(--alt)}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+.dlegend{display:flex;flex-direction:column;gap:3px}
+.dlegend .ramp{height:14px;border-radius:3px;border:1px solid var(--line)}
+.dticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.params{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px}
+.param{display:flex;flex-direction:column;gap:4px}
+.param .row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+.param input[type=number]{width:6.5em;font:500 14px var(--f-mono);background:var(--soft);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px;text-align:right}
+.param .u{font-family:var(--f-mono);font-size:13px;color:var(--muted);min-width:3.6em}
+.param .in{display:flex;align-items:center;gap:6px}
+.param input[type=range]{width:100%;accent-color:var(--accent)}
+.param select{width:100%}
+.info{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--theory);color:#fff;font:700 13px/1 Georgia,"Times New Roman",serif;font-style:italic;text-decoration:none;flex:0 0 auto}
+.info:hover{filter:brightness(1.15)}
+.info:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{font-size:13px;color:var(--muted);margin:0}
+.warn{font-size:13px;color:var(--bare);margin:0;font-weight:600}
+.cutsel{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+#hover{font-family:var(--f-mono);font-size:13px;min-height:1.4em}
+ol.chain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;counter-reset:st}
+ol.chain li{counter-increment:st;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:2px 10px;align-items:baseline;padding:7px 10px;border-radius:8px;background:var(--soft)}
+ol.chain li::before{content:counter(st);font-family:var(--f-mono);font-weight:500;color:var(--muted);grid-row:span 2}
+.chain .t{font-weight:600}
+.chain .val{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.chain .f{grid-column:2 / span 2;font-family:var(--f-mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:4px}
+#c3d{background:var(--soft)}
+.footer a,footer a{color:var(--theory)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+<div class="htext">
+  <p class="byline"><b>Dr Régis Kubler</b>, Arts et Métiers Institute of Technology · Developed with the assistance of Claude Opus 5.5 (Anthropic), November 2026 · <b>Version 1.0 (18 November 2026)</b></p>
+  <h1>Cylinder Shot Peening Coverage Simulator</h1>
+  <p>A cylinder of radius R turns at N rpm while the nozzle, aimed at its axis, travels along it at the traverse speed V. Relative to the surface, the jet draws a helix: one turn of the cylinder moves the nozzle by the pitch <span class="formula">p = 60·V/N</span>. When the pitch is large compared with the jet size ΔX, the impacts pile up in helical stripes. The page builds the map of impacts per point λ on the whole surface, then the coverage <span class="formula">τ = 100·(1 − e<sup>−λ</sup>)</span>, and compares it with the average model.</p>
+</div>
+</header>
+
+<div class="bar" role="toolbar" aria-label="Animation controls">
+  <button id="play" class="primary">▶ Play</button>
+  <button id="rev">+1 turn</button>
+  <button id="pass">+1 pass</button>
+  <button id="all">Run all</button>
+  <button id="reset">Restart</button>
+  <span class="sep"></span>
+  <label for="speed">Time
+    <select id="speed"><option value="auto" selected>auto (1 pass ≈ 10 s)</option><option value="1">real time</option><option value="3">×3</option><option value="10">×10</option><option value="30">×30</option><option value="100">×100</option><option value="300">×300</option><option value="1000">×1000</option></select></label>
+  <label for="view">Maps show
+    <select id="view"><option value="cov" selected>coverage τ (%)</option><option value="lam">impacts per point λ</option></select></label>
+</div>
+
+<section class="panel" aria-label="Rotating cylinder">
+  <h2>Rotating cylinder seen from the side</h2>
+  <canvas id="c3d" aria-label="Side view of the rotating cylinder with the nozzle and the coverage on its surface"></canvas>
+  <div class="phase" id="phase" aria-live="polite"></div>
+</section>
+
+<div class="grid">
+  <section class="panel" aria-label="Unrolled surface">
+    <h2>Unrolled surface: axial position z × circumference s</h2>
+    <canvas id="map" aria-label="Unrolled map of the cylinder surface with the helical path and the local coverage"></canvas>
+    <div class="dlegend">
+      <div class="ramp" id="ramp"></div>
+      <div class="dticks" id="ticks"></div>
+      <div class="legend"><span><span class="sw" style="border:2px dashed var(--ink);background:none"></span>central zone used for statistics (ends excluded by ΔX)</span><span><span class="sw" style="background:var(--accent)"></span>jet footprint</span><span id="scaleNote"></span></div>
+    </div>
+    <div id="hover">Hover over the map to read the local values. Click to move the cross-section line.</div>
+  </section>
+
+  <section class="panel" aria-label="Cross-section and results">
+    <h2>Cross-section along the axis</h2>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--accent);height:3px"></span>coverage τ(z)</span>
+      <span><span class="sw" style="background:var(--theory);height:3px"></span>impacts per point λ(z)</span>
+      <span><span class="sw" style="background:var(--muted);height:2px"></span>crossings of the last helix</span>
+    </div>
+    <svg class="chart" id="xsec" viewBox="0 0 560 250" role="img" aria-label="Coverage and impacts per point along the axis"></svg>
+    <div class="reads">
+      <div class="read"><div class="k">Passes done</div><div class="v" id="rN">0</div></div>
+      <div class="read"><div class="k">Surface speed V<sub>s</sub> = 2πR·N/60</div><div class="v" id="rVs">–</div></div>
+      <div class="read"><div class="k">Helix pitch p = 60·V/N</div><div class="v" id="rP">–</div></div>
+      <div class="read"><div class="k">Helix angle α = atan(V/V<sub>s</sub>)</div><div class="v" id="rA">–</div></div>
+      <div class="read"><div class="k">Overlap ratio ΔX/p</div><div class="v" id="rOv">–</div></div>
+      <div class="read"><div class="k">Turns per pass</div><div class="v" id="rT">–</div></div>
+      <div class="read hl"><div class="k">Mean coverage (central zone)</div><div class="v" id="rCov">0 %</div></div>
+      <div class="read"><div class="k">Min / max coverage</div><div class="v" id="rMM">–</div></div>
+      <div class="read"><div class="k">Mean impacts per point λ</div><div class="v" id="rLam">0</div></div>
+      <div class="read hl"><div class="k">Stripe amplitude (λ max − min) / mean</div><div class="v" id="rStr">–</div></div>
+      <div class="read avg"><div class="k">Average model 100·(1 − e<sup>−K<sub>c</sub>·n</sup>)</div><div class="v" id="rAvg">–</div></div>
+      <div class="read th"><div class="k">Helical stripe model</div><div class="v" id="rStrTh">–</div></div>
+    </div>
+    <p class="warn" id="warn"></p>
+  </section>
+</div>
+
+<div class="grid">
+  <section class="panel" aria-label="Coverage versus number of passes">
+    <h2>Coverage versus number of passes</h2>
+    <div class="legend">
+      <span><svg width="26" height="10" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--theory)" stroke-width="3"/></svg>helical stripe model (accounts for stripes)</span>
+      <span><svg width="26" height="10" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--alt)" stroke-width="3" stroke-dasharray="6 4"/></svg>average model 1 − e<sup>−K<sub>c</sub>n</sup> (ignores stripes)</span>
+      <span><span class="sw" style="background:var(--soft);border:1px solid var(--line)"></span>beyond the planned passes</span>
+      <span><span class="sw" style="background:var(--accent);border-radius:50%"></span>simulation (central zone)</span>
+    </div>
+    <svg class="chart" id="cn" viewBox="0 0 560 270" role="img" aria-label="Coverage versus number of passes"></svg>
+    <div class="reads">
+      <div class="read th"><div class="k">Passes for 98 % (stripe model)</div><div class="v" id="n98">–</div></div>
+      <div class="read avg"><div class="k">Passes for 98 % (average model)</div><div class="v" id="n98a">–</div></div>
+      <div class="read"><div class="k">Time per pass</div><div class="v" id="tPass">–</div></div>
+      <div class="read"><div class="k">Time for the planned passes</div><div class="v" id="tP">–</div></div>
+      <div class="read hl"><div class="k">Time to reach 98 %</div><div class="v" id="t98">–</div></div>
+    </div>
+  </section>
+  <section class="panel" aria-label="Coverage versus rotation speed">
+    <h2>One-pass coverage versus rotation speed</h2>
+    <div class="legend">
+      <span><svg width="26" height="10" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--theory)" stroke-width="3"/></svg>helical stripe model</span>
+      <span><svg width="26" height="10" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><line x1="1" y1="5" x2="25" y2="5" stroke="var(--alt)" stroke-width="3" stroke-dasharray="6 4"/></svg>average model</span>
+      <span><span class="sw" style="background:var(--accent);border-radius:50%"></span>current N</span>
+    </div>
+    <svg class="chart" id="cN" viewBox="0 0 560 270" role="img" aria-label="Coverage after one pass versus rotation speed"></svg>
+    <p class="note" id="cNnote"></p>
+  </section>
+</div>
+
+<div class="grid">
+  <section class="panel" aria-label="Parameters">
+    <h2>Parameters</h2>
+    <div class="params" id="params"></div>
+    <div><button id="defaults">Reset to default values</button></div>
+    <p class="note">Defaults: media and jet of the reference spreadsheet model (ṁ = 1.5 kg/min, ρ = 2.2 g/cm³, D = 150 µm, r = 10 µm, ΔX = 20 mm, Gaussian jet) on a cylinder of radius 25 mm and length 150 mm turning at 24 rpm, with a traverse speed of 8 mm/s: the pitch is 20 mm, as large as the jet, so the helix is clearly visible. Two passes back and forth. Changing a parameter restarts the simulation.</p>
+  </section>
+  <section class="panel" aria-label="Calculation chain">
+    <h2>How the cylinder model works</h2>
+    <ol class="chain">
+      <li><span class="t">E[D³]: mean of the cube of the shot diameter</span><span class="val" id="c0"></span><span class="f">The mass of a shot is proportional to D³, so the mean shot mass needs E[D³], the mean of D³ over all shots. Identical shots: E[D³] = D³. Log-normal sizes with mass median D₅₀: E[D³] = D₅₀³·e^(−4.5σ²).</span></li>
+      <li><span class="t">Shots per second</span><span class="val" id="c1"></span><span class="f">Ṅ = ṁ / m̄ₚ, with m̄ₚ = ρ·π/6·E[D³]</span></li>
+      <li><span class="t">Area of one dent</span><span class="val" id="c2"></span><span class="f">a = π·c²·E[D²], c = r₅₀/D₅₀, E[D²] = D₅₀²·e^(−4σ²)</span></li>
+      <li><span class="t">Surface speed and helix</span><span class="val" id="c3"></span><span class="f">V<sub>s</sub> = 2πR·N/60. Relative to the surface the nozzle moves at (V, V<sub>s</sub>): a helix of pitch p = V·60/N = 2πR·V/V<sub>s</sub> and angle α = atan(V/V<sub>s</sub>).</span></li>
+      <li><span class="t">Shots that hit the cylinder</span><span class="val" id="c4"></span><span class="f">The jet is a parallel stream of width ΔX aimed at the axis. A shot at a distance u from the axis plane hits the surface at the arc s = R·asin(u/R); shots with |u| &gt; R miss. Density per unit arc: g<sub>s</sub>(s) = g(R·sin(s/R))·cos(s/R). Fraction that hits: c = G(R) − G(−R).</span></li>
+      <li><span class="t">Average K of one pass</span><span class="val" id="c5"></span><span class="f">K<sub>c</sub> = c·a·Ṅ / (2πR·V): one pass spreads the shots of L/V seconds over the area 2πR·L. Equivalent to a flat raster with step p and line speed V<sub>s</sub>: K<sub>c</sub> = c·a·Ṅ/(V<sub>s</sub>·p). It does not depend on the rotation speed.</span></li>
+      <li><span class="t">Local impacts per point</span><span class="val" id="c6"></span><span class="f">Along the helical coordinate ζ = z − s·p/(2πR) (forward pass) or ζ = z + s·p/(2πR) (return pass), λ is periodic with period p: λ(ζ) = a·Ṅ·Σ<sub>k</sub> h(ζ − k·p), with the track profile h(ζ) = (1/V<sub>s</sub>)·∫ g(ζ − σ·tan α)·g<sub>s</sub>(σ) dσ.</span></li>
+      <li><span class="t">Stripe amplitude, one pass</span><span class="val" id="c7"></span><span class="f" id="c7f">(λ max − λ min) / λ mean along ζ. Gaussian jet: ≈ 4·e^(−2π²(σ<sub>j</sub>/p)²), below 3 % for p ≤ ΔX/2.</span></li>
+      <li><span class="t">Rotation speed without stripes</span><span class="val" id="c8"></span><span class="f">For a Gaussian jet, p ≤ ΔX/2 gives N ≥ 120·V/ΔX (rpm).</span></li>
+      <li><span class="t">Back-and-forth passes</span><span class="val" id="c9"></span><span class="f">A return pass draws a helix of the opposite hand. The two families of stripes cross, λ = λ₊(ζ₊) + λ₋(ζ₋), and the mean coverage factorises: τ̄ = 1 − mean(e^(−λ₊))·mean(e^(−λ₋)). Passes in the same direction stack their helices, shifted by a phase that depends on the rotation angle at the start of each pass.</span></li>
+    </ol>
+  </section>
+</div>
+
+<footer>
+  <span><b>Dr Régis Kubler</b>, Arts et Métiers Institute of Technology. Developed with the assistance of Claude Opus 5.5 (Anthropic), November 2026. Related tools: <a href="https://rkubler.github.io/peening-coverage/">Shot Peening Coverage Simulator</a> (local coverage), <a href="https://rkubler.github.io/extended-simulator/">Extended Shot Peening Coverage Simulator</a> (flat part).</span>
+  <span>Educational model: the maps show the expected number of impacts per point (mean field); random impacts make the local coverage τ = 1 − e<sup>−λ</sup>. Constant rotation and traverse speeds, the jet keeps firing beyond the ends of the cylinder (overtravel), parallel jet aimed at the axis, dent size independent of the incidence angle. It does not replace coverage verification according to the applicable standards (e.g. SAE J2277). Code: MIT licence · Documentation: CC BY 4.0.</span>
+  <span>Anonymous visit statistics by GoatCounter (no cookies, no personal data).</span>
+</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- parameters ---------- */
+const DEF={mdot:1.5, rho:2.2, D:150, sig:0, r:10, dX:20, prof:"gauss", pexp:4, R:25, L:150, N:24, V:8, n:2, seq:"bf", phase:"motion", curv:"on"};
+const SPEC=[
+ {k:"mdot", lab:"Media flow rate ṁ", u:"kg/min", min:0.1, max:6, step:0.1},
+ {k:"rho",  lab:"Media density ρ", u:"g/cm³", min:1, max:8, step:0.1},
+ {k:"D",    lab:"Mass median diameter D₅₀", u:"µm", min:30, max:1000, step:10},
+ {k:"sig",  lab:"Size spread σ (log-normal)", u:"–", min:0, max:0.6, step:0.02},
+ {k:"r",    lab:"Dent radius r (for D = D₅₀)", u:"µm", min:2, max:100, step:1},
+ {k:"dX",   lab:"Jet size ΔX", u:"mm", min:2, max:60, step:0.5},
+ {k:"prof", lab:"Jet profile across the jet", info:"https://rkubler.github.io/extended-simulator/jet_profile.html", sel:[["gauss","Gaussian (σⱼ = ΔX/4)"],["flat","Flattened Gaussian (exponent p)"],["uniform","Uniform (top-hat over ΔX)"]]},
+ {k:"pexp", lab:"Flatness exponent p (flattened Gaussian)", u:"–", min:2, max:20, step:0.5, only:"flat"},
+ {k:"R",    lab:"Cylinder radius R", u:"mm", min:5, max:500, step:1},
+ {k:"L",    lab:"Cylinder length L", u:"mm", min:20, max:1000, step:5},
+ {k:"N",    lab:"Rotation speed N", u:"rpm", min:1, max:60, step:1},
+ {k:"V",    lab:"Traverse speed V (along the axis)", u:"mm/s", min:0.1, max:100, step:0.1},
+ {k:"n",    lab:"Number of passes n", u:"–", min:1, max:30, step:1},
+ {k:"seq",  lab:"Pass sequence", sel:[["bf","Back and forth (jet always on)"],["same","Same direction, return with the jet off"]]},
+ {k:"phase",lab:"Rotation angle at the start of a pass", sel:[["motion","Follows from the motion"],["random","Random at each pass"]]},
+ {k:"curv", lab:"Curvature of the surface", sel:[["on","Taken into account (jet hits a curved surface)"],["off","Ignored (surface treated as flat)"]]}
+];
+const P=Object.assign({},DEF);
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+const nf=(x,d)=>x.toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d});
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const mod=(a,b)=>((a%b)+b)%b;
+function sci(x,d){ if(!isFinite(x)) return "–"; if(x===0) return "0"; const e=Math.floor(Math.log10(Math.abs(x))); if(e>=-2&&e<=5) return nf(x,e>=2?0:d); return nf(x/Math.pow(10,e),d)+" × 10<sup>"+String(e).replace("-","−")+"</sup>"; }
+function fmtTime(s){ if(!isFinite(s)) return "–"; if(s<120) return nf(s,1)+" s"; if(s<7200) return nf(s/60,1)+" min"; return nf(s/3600,1)+" h"; }
+function fmtLen(x){ return x<10? nf(x,2)+" mm" : x<100? nf(x,1)+" mm" : nf(x,0)+" mm"; }
+
+/* ---------- jet profile across the jet (normalised), cumulative and integral of the cumulative ---------- */
+function erf(x){ const t=1/(1+0.3275911*Math.abs(x)), y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return x>=0?y:-y; }
+function gammaln(x){ const c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y=x, t=x+5.5; t-=(x+0.5)*Math.log(t); let ser=1.000000000190015; for(const ci of c) ser+=ci/++y; return -t+Math.log(2.5066282746310005*ser/x); }
+function gammaQcf(a,x,gl){ const FP=1e-300; let b=x+1-a, c=1/FP, d=1/b, h=d;
+  for(let i=1;i<500;i++){ const an=-i*(i-a); b+=2; d=an*d+b; if(Math.abs(d)<FP) d=FP; c=b+an/c; if(Math.abs(c)<FP) c=FP; d=1/d; const del=d*c; h*=del; if(Math.abs(del-1)<1e-14) break; }
+  return Math.exp(-x+a*Math.log(x)-gl)*h; }
+function gammaP(a,x){ if(x<=0) return 0; const gl=gammaln(a);
+  if(x<a+1){ let ap=a, sum=1/a, del=sum; for(let n=0;n<500;n++){ ap++; del*=x/ap; sum+=del; if(Math.abs(del)<Math.abs(sum)*1e-14) break; } return Math.min(1,sum*Math.exp(-x+a*Math.log(x)-gl)); }
+  return 1-gammaQcf(a,x,gl); }
+function gammaQ(a,x){ if(x<=0) return 1; const gl=gammaln(a); return x<a+1? 1-gammaP(a,x) : gammaQcf(a,x,gl); }
+let J={};
+function jetConst(){ const p=P.pexp, w=(P.dX/2)/Math.pow(2,1/p); J={p,w,N:2*w*Math.exp(gammaln(1+1/p)),H:w*Math.exp(gammaln(2/p)-gammaln(1/p))/2}; }
+function prof(u){ if(P.prof==="uniform") return Math.abs(u)<P.dX/2?1/P.dX:(Math.abs(u)===P.dX/2?0.5/P.dX:0);
+  if(P.prof==="flat") return Math.exp(-Math.pow(Math.abs(u)/J.w,J.p))/J.N;
+  const s=P.dX/4; return Math.exp(-u*u/(2*s*s))/(Math.sqrt(2*Math.PI)*s); }
+function cdf(u){ if(P.prof==="uniform") return Math.max(0,Math.min(1,u/P.dX+0.5));
+  if(P.prof==="flat"){ const q=0.5*gammaP(1/J.p,Math.pow(Math.abs(u)/J.w,J.p)); return u>=0?0.5+q:0.5-q; }
+  const s=P.dX/4; return 0.5*(1+erf(u/(Math.SQRT2*s))); }
+function icdf(u){ // ∫_{-∞}^{u} cdf
+  if(P.prof==="uniform"){ const h=P.dX/2; if(u<=-h) return 0; if(u>=h) return u; const t=u+h; return t*t/(2*P.dX); }
+  if(P.prof==="flat") return u*cdf(u) + J.H*gammaQ(2/J.p,Math.pow(Math.abs(u)/J.w,J.p));
+  const s=P.dX/4, z=u/s; return s*( z*0.5*(1+erf(z/Math.SQRT2)) + Math.exp(-z*z/2)/Math.sqrt(2*Math.PI) ); }
+function halfReach(){ return P.prof==="uniform"? P.dX/2 : P.prof==="flat"? J.w*Math.pow(8,1/J.p) : P.dX; }
+
+/* ---------- circumferential profile on the surface (curvature) ---------- */
+let CS; // {S, c, G(σ), I(σ), g(σ)}
+function buildCirc(){
+  const R=P.R, reach=halfReach();
+  if(P.curv!=="on"){ CS={S:reach, c:1, curved:false, g:prof, G:cdf, I:icdf}; return; }
+  const umax=Math.min(reach,R), S=R*Math.asin(umax/R), G0=cdf(-R), c=cdf(R)-G0;
+  const g=s=>Math.abs(s)<Math.PI*R/2? prof(R*Math.sin(s/R))*Math.cos(s/R) : 0;
+  const Graw=s=>{ const t=Math.max(-Math.PI/2,Math.min(Math.PI/2,s/R)); return cdf(R*Math.sin(t))-G0; };
+  // table of the integral of G over [-S, S]
+  const M=4096, hS=2*S/M, IT=new Float64Array(M+1), GT=new Float64Array(M+1);
+  for(let i=0;i<=M;i++) GT[i]=Graw(-S+i*hS);
+  for(let i=1;i<=M;i++) IT[i]=IT[i-1]+0.5*(GT[i]+GT[i-1])*hS;
+  const G=s=>{ if(s<=-S) return Graw(-S); if(s>=S) return c; return Graw(s); };
+  const I=s=>{ if(s<=-S) return 0; if(s>=S) return IT[M]+c*(s-S); const x=(s+S)/hS, i=Math.min(M-1,Math.floor(x)), f=x-i; return IT[i]*(1-f)+IT[i+1]*f; };
+  CS={S, c, curved:true, g, G, I};
+}
+
+/* ---------- model ---------- */
+let M;
+function derive(){
+  jetConst(); buildCirc();
+  const sg=P.sig, Dm=P.D*1e-6, ED3=Math.pow(Dm,3)*Math.exp(-4.5*sg*sg), ED2=Dm*Dm*Math.exp(-4*sg*sg);
+  const mp=P.rho*1000*Math.PI/6*ED3, Nd=(P.mdot/60)/mp, cc=P.r/P.D, a=Math.PI*cc*cc*ED2*1e6;
+  const circ=2*Math.PI*P.R, Vs=circ*P.N/60, p=60*P.V/P.N, tanA=P.V/Vs;
+  const ov=halfReach()+0.02*P.L, Tp=(P.L+2*ov)/P.V;
+  const aN=a*Nd, Kc=CS.c*aN/(circ*P.V);
+  M={ED3,ED2,mp,Nd,a,aN,circ,Vs,p,tanA,ov,Tp,Kc,K1:aN/(P.V*P.dX)};
+  M.lam1=lam1Arr(P.N,256,1601,300);
+  buildPlan();
+  buildTheory();
+}
+// λ of one pass along the helical coordinate ζ ∈ [0,p), for a rotation speed Nrpm
+function lam1Arr(Nrpm,NT,MH,Q){
+  const circ=2*Math.PI*P.R, Vs=circ*Nrpm/60, p=60*P.V/Nrpm, tanA=P.V/Vs, reach=halfReach(), S=CS.S;
+  const Hz=reach+S*tanA, hh=2*Hz/(MH-1), H=new Float64Array(MH);
+  for(let m=0;m<MH;m++){ const z=-Hz+m*hh; let sum=0;
+    if(tanA<=1){ const ds=2*S/Q; for(let q=0;q<=Q;q++){ const s=-S+q*ds, w=(q===0||q===Q)?0.5:1; sum+=w*prof(z-s*tanA)*CS.g(s); } H[m]=sum*ds/Vs; }
+    else { const du=2*reach/Q; for(let q=0;q<=Q;q++){ const u=-reach+q*du, w=(q===0||q===Q)?0.5:1; sum+=w*prof(u)*CS.g((z-u)/tanA); } H[m]=sum*du/P.V; } }
+  const hAt=z=>{ if(z<=-Hz||z>=Hz) return 0; const x=(z+Hz)/hh, i=Math.min(MH-2,Math.floor(x)), f=x-i; return H[i]*(1-f)+H[i+1]*f; };
+  const lam=new Float64Array(NT), A=a_N();
+  for(let i=0;i<NT;i++){ const z=(i+0.5)/NT*p; let s=0; const k0=Math.ceil((z-Hz)/p), k1=Math.floor((z+Hz)/p); for(let k=k0;k<=k1;k++) s+=hAt(z-k*p); lam[i]=A*s; }
+  return {lam,p};
+}
+function a_N(){ const sg=P.sig, Dm=P.D*1e-6, ED3=Math.pow(Dm,3)*Math.exp(-4.5*sg*sg), ED2=Dm*Dm*Math.exp(-4*sg*sg), mp=P.rho*1000*Math.PI/6*ED3, cc=P.r/P.D; return Math.PI*cc*cc*ED2*1e6*(P.mdot/60)/mp; }
+
+/* ---------- plan of the passes (also extended beyond n for the curves) ---------- */
+let PLAN=[], randPhases=[];
+function buildPlan(){
+  const NP=Math.max(P.n,200), out=[]; let t=0;
+  if(randPhases.length<NP) for(let i=randPhases.length;i<NP;i++) randPhases.push(Math.random());
+  for(let i=0;i<NP;i++){ const dir=(P.seq==="bf"&&i%2===1)?-1:1;
+    const z0=dir>0?-M.ov:P.L+M.ov, s0=P.phase==="random"? randPhases[i]*M.circ : M.Vs*t;
+    const ph=dir>0? mod(z0-s0*M.p/M.circ, M.p) : mod(z0+s0*M.p/M.circ, M.p);
+    out.push({dir,t0:t,z0,s0,ph,tEnd:t+M.Tp}); t+=M.Tp*(P.seq==="same"?2:1); }
+  PLAN=out;
+}
+/* ---------- helical stripe model: mean coverage after k passes ---------- */
+let TH;
+function buildTheory(){
+  const NT=M.lam1.lam.length, L1=M.lam1.lam, p=M.p, Lp=new Float64Array(NT), Lm=new Float64Array(NT);
+  const cov=[0], lmin=[0], lmax=[0];
+  const shiftAdd=(arr,ph)=>{ const sh=ph/p*NT; for(let i=0;i<NT;i++){ const x=mod(i-sh,NT), j=Math.floor(x), f=x-j; arr[i]+=L1[j%NT]*(1-f)+L1[(j+1)%NT]*f; } };
+  let hasM=false;
+  for(let k=0;k<PLAN.length;k++){ const ps=PLAN[k]; if(ps.dir>0) shiftAdd(Lp,ps.ph); else { shiftAdd(Lm,ps.ph); hasM=true; }
+    let ep=0,em=0,mnp=1e9,mxp=0,mnm=1e9,mxm=0; for(let i=0;i<NT;i++){ ep+=Math.exp(-Lp[i]); em+=Math.exp(-Lm[i]); mnp=Math.min(mnp,Lp[i]); mxp=Math.max(mxp,Lp[i]); mnm=Math.min(mnm,Lm[i]); mxm=Math.max(mxm,Lm[i]); }
+    cov.push(100*(1-(ep/NT)*(em/NT))); lmin.push(mnp+mnm); lmax.push(mxp+mxm); }
+  let mn=1e9,mx=0,me=0; for(let i=0;i<NT;i++){ mn=Math.min(mn,L1[i]); mx=Math.max(mx,L1[i]); me+=L1[i]; } me/=NT;
+  TH={cov,lmin,lmax,amp:me>0?(mx-mn)/me:0,mean1:me};
+}
+function n98(stripe){ if(!stripe) return Math.log(50)/M.Kc; const c=TH.cov; for(let k=1;k<c.length;k++) if(c[k]>=98) return k-1+(98-c[k-1])/Math.max(1e-9,c[k]-c[k-1]); return Infinity; }
+function timeAfter(np){ if(!isFinite(np)) return Infinity; const k=Math.floor(np), f=np-k; if(k>=PLAN.length) return Infinity;
+  const tk=k>0?PLAN[k-1].tEnd:0; return f>0? PLAN[k].t0+f*M.Tp : tk; }
+
+/* ---------- surface grid and deposition ---------- */
+let G; const S={pass:0,t:0,playing:false,stopAt:null,stopT:0,lam:null,pts:[],cutS:null,last:-1};
+function build(){
+  const circ=M.circ, L=P.L;
+  let h=Math.min(P.dX/8, M.p/6, circ/240, L/300); h=Math.max(h, Math.sqrt(L*circ/2.5e5), P.dX/60);
+  const NZ=Math.max(20,Math.round(L/h)), NS=Math.max(24,Math.round(circ/h));
+  G={NZ,NS,hz:L/NZ,hs:circ/NS};
+  S.lam=new Float32Array(NZ*NS); S.pass=0; S.t=0; S.pts=[]; S.last=-1;
+  if(S.cutS===null||S.cutS>=circ) S.cutS=circ/4;
+}
+function nozzleAt(ps,t){ return {z:ps.z0+ps.dir*P.V*t, s:ps.s0+M.Vs*t}; }
+function deposit(ps,ta,tb){
+  const NZ=G.NZ,NS=G.NS,hz=G.hz,hs=G.hs, A=M.aN, a=nozzleAt(ps,ta), b=nozzleAt(ps,tb), reach=halfReach(), Ss=CS.S;
+  if(M.Vs>=P.V){ // circumferential motion dominates: exact integral along s, cell average across (z)
+    const zm=(a.z+b.z)/2, i0=Math.max(0,Math.floor((zm-reach)/hz)), i1=Math.min(NZ-1,Math.floor((zm+reach)/hz));
+    if(i1<i0) return; const wz=[]; for(let i=i0;i<=i1;i++) wz.push((cdf((i+1)*hz-zm)-cdf(i*hz-zm))/hz);
+    const lo=a.s, hi=b.s, j0=Math.floor((lo-Ss)/hs), j1=Math.floor((hi+Ss)/hs), I=CS.I;
+    for(let j=j0;j<=j1;j++){ const xl=j*hs, xr=(j+1)*hs;
+      const w=(I(xr-lo)-I(xr-hi)-I(xl-lo)+I(xl-hi))/hs*A/M.Vs; if(w<=0) continue;
+      const row=mod(j,NS)*NZ; for(let t=0;t<wz.length;t++) S.lam[row+i0+t]+=w*wz[t]; }
+  } else { // axial motion dominates: exact integral along z, cell average around the circumference
+    const sm=(a.s+b.s)/2, j0=Math.floor((sm-Ss)/hs), j1=Math.floor((sm+Ss)/hs), Gs=CS.G, ws=[];
+    for(let j=j0;j<=j1;j++) ws.push((Gs((j+1)*hs-sm)-Gs(j*hs-sm))/hs);
+    const lo=Math.min(a.z,b.z), hi=Math.max(a.z,b.z), i0=Math.max(0,Math.floor((lo-reach)/hz)), i1=Math.min(NZ-1,Math.floor((hi+reach)/hz));
+    for(let i=i0;i<=i1;i++){ const xl=i*hz, xr=(i+1)*hz;
+      const w=(icdf(xr-lo)-icdf(xr-hi)-icdf(xl-lo)+icdf(xl-hi))/hz*A/P.V; if(w<=0) continue;
+      for(let t=0;t<ws.length;t++){ if(ws[t]<=0) continue; S.lam[mod(j0+t,NS)*NZ+i]+=w*ws[t]; } }
+  }
+}
+// drift across the dominant direction during one segment: half a cell, or 1/40 of the footprint if larger (midpoint rule)
+function segDt(){ const dl=Math.max(0.5*Math.min(G.hz,G.hs), Math.min(P.dX,2*CS.S)/40); return M.Vs>=P.V? Math.min(M.circ/M.Vs, dl/P.V) : dl/M.Vs; }
+function advance(dt,maxSeg){ // move the simulation forward by dt seconds of process time
+  let segs=0;
+  while(dt>1e-12 && S.pass<P.n){
+    const ps=PLAN[S.pass], rem=M.Tp-S.t; let step=Math.min(dt,rem,segDt());
+    if(S.stopAt==="rev"){ const r=S.stopT-S.t; if(r<step) step=Math.max(r,0); }
+    if(step>0){ deposit(ps,S.t,S.t+step); S.t+=step; dt-=step; S.last=S.pass; }
+    if(S.stopAt==="rev" && S.t>=S.stopT-1e-12){ S.playing=false; S.stopAt=null; setPlay(); }
+    if(S.t>=M.Tp-1e-12){ const st=stats(); S.pts.push({n:S.pass+1,cov:st.cov}); S.pass++; S.t=0; drawCn();
+      if(S.stopAt==="pass"){ S.playing=false; S.stopAt=null; setPlay(); return; }
+      if(S.pass>=P.n){ S.playing=false; setPlay(); return; } }
+    if(!S.playing && S.stopAt===null && maxSeg!==Infinity) return;
+    if(++segs>=maxSeg) return;
+  }
+}
+
+/* ---------- statistics (central zone: all the circumference, ends excluded by ΔX) ---------- */
+function stats(){
+  const NZ=G.NZ,NS=G.NS; let i0=Math.ceil(P.dX/G.hz), i1=Math.floor((P.L-P.dX)/G.hz)-1; if(i1<i0){ i0=0; i1=NZ-1; }
+  let n=0,cs=0,cmin=1e9,cmax=0,ls=0,lmin=1e9,lmax=0;
+  for(let j=0;j<NS;j++) for(let i=i0;i<=i1;i++){ const l=S.lam[j*NZ+i], c=1-Math.exp(-l); n++; cs+=c; ls+=l; if(c<cmin)cmin=c; if(c>cmax)cmax=c; if(l<lmin)lmin=l; if(l>lmax)lmax=l; }
+  return {cov:100*cs/n,cmin:100*cmin,cmax:100*cmax,lmean:ls/n,lmin,lmax};
+}
+
+/* ---------- colours ---------- */
+function turbo(t){ t=Math.max(0,Math.min(1,t));
+  const r=0.13572138+t*(4.61539260+t*(-42.66032258+t*(132.13108234+t*(-152.94239396+t*59.28637943))));
+  const g=0.09140261+t*(2.19418839+t*(4.84296658+t*(-14.18503333+t*(4.27729857+t*2.82956604))));
+  const b=0.10667330+t*(12.64194608+t*(-60.58204836+t*(110.36276771+t*(-89.90310912+t*27.34824973))));
+  return [r,g,b].map(v=>Math.round(255*Math.max(0,Math.min(1,v)))); }
+function col(v){ return v<=1e-9?[214,219,226]:turbo(0.04+0.96*v); }
+const LUT=new Uint8Array(1025*3); for(let i=0;i<=1024;i++){ const c=col(i/1024); LUT[3*i]=c[0]; LUT[3*i+1]=c[1]; LUT[3*i+2]=c[2]; }
+let lamScale=1;
+const viewCov=()=>document.getElementById("view").value==="cov";
+function lutIndex(l){ const v=viewCov()?1-Math.exp(-l):l/lamScale; return l<=1e-9?0:Math.max(1,Math.min(1024,Math.round(v*1024))); }
+
+/* ---------- 3D side view ---------- */
+const c3=document.getElementById("c3d"), x3=c3.getContext("2d"), tex=document.createElement("canvas"), tx=tex.getContext("2d");
+let V3, DPR=1;
+function resize3(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  const w=Math.round(c3.getBoundingClientRect().width)||700, top=96, bot=22, pad=16;
+  const mz=Math.max(M.ov,0.12*P.L); let k=(w-2*pad)/(P.L+2*mz); const maxH=Math.min(300,0.6*w); if(2*P.R*k>maxH) k=maxH/(2*P.R);
+  const cylW=P.L*k, cylH=2*P.R*k, H=Math.round(top+cylH+bot), x0=(w-(P.L+2*mz)*k)/2+mz*k;
+  c3.width=w*DPR; c3.height=H*DPR; c3.style.height=H+"px";
+  const q=Math.min(DPR,1.5,Math.sqrt(320000/Math.max(1,cylW*cylH)));
+  tex.width=Math.max(2,Math.round(cylW*q)); tex.height=Math.max(2,Math.round(cylH*q));
+  // per-row circumferential offset and shading, per-column axial cell
+  const TW=tex.width, TH=tex.height, rowS=new Float64Array(TH), shade=new Float64Array(TH), colI=new Int32Array(TW), colJ=new Int32Array(TW), colF=new Float64Array(TW);
+  for(let y=0;y<TH;y++){ const v=Math.max(-1,Math.min(1,((y+0.5)/TH)*2-1)), ph=Math.asin(v); rowS[y]=-P.R*(ph+Math.PI/2); shade[y]=0.55+0.45*Math.max(0,Math.cos(ph+0.45)); }
+  for(let x=0;x<TW;x++){ const f=Math.max(0,Math.min(G.NZ-1,(x+0.5)/TW*G.NZ-0.5)), i=Math.min(G.NZ-2,Math.floor(f)); colI[x]=Math.max(0,i); colJ[x]=Math.min(G.NZ-1,Math.max(0,i)+1); colF[x]=f-Math.max(0,i); }
+  V3={w,H,k,top,x0,cylW,cylH,mz,rowS,shade,colI,colJ,colF,img:tx.createImageData(TW,TH)};
+}
+function curNozzle(){ const i=Math.min(S.pass,P.n-1), ps=PLAN[i], t=S.pass>=P.n?M.Tp:S.t; return Object.assign(nozzleAt(ps,t),{dir:ps.dir,firing:S.pass<P.n}); }
+function draw3D(){
+  const v=V3, nz=curNozzle(), d=v.img.data, TW=tex.width, TH=tex.height, NZ=G.NZ, NS=G.NS, hs=G.hs, circ=M.circ;
+  const lam=S.lam, cI=v.colI, cJ=v.colJ, cF=v.colF;
+  for(let y=0;y<TH;y++){ const fs=mod(nz.s+v.rowS[y],circ)/hs-0.5, j0=Math.floor(fs), fj=fs-j0, r0=mod(j0,NS)*NZ, r1=mod(j0+1,NS)*NZ, sh=v.shade[y];
+    for(let x=0;x<TW;x++){ const f=cF[x], a=lam[r0+cI[x]]*(1-f)+lam[r0+cJ[x]]*f, b=lam[r1+cI[x]]*(1-f)+lam[r1+cJ[x]]*f;
+      const li=lutIndex(a*(1-fj)+b*fj)*3, q=(y*TW+x)*4; d[q]=LUT[li]*sh; d[q+1]=LUT[li+1]*sh; d[q+2]=LUT[li+2]*sh; d[q+3]=255; } }
+  tx.putImageData(v.img,0,0);
+  const c=x3; c.setTransform(DPR,0,0,DPR,0,0); c.clearRect(0,0,v.w,v.H);
+  const yt=v.top, yb=v.top+v.cylH, X=z=>v.x0+z*v.k;
+  // shafts
+  const shH=Math.max(6,Math.min(v.cylH*0.22,18)), yc=(yt+yb)/2;
+  c.fillStyle=css("--muted"); c.globalAlpha=.55; c.fillRect(X(-v.mz*0.9),yc-shH/2,v.mz*0.9*v.k,shH); c.fillRect(X(P.L),yc-shH/2,v.mz*0.9*v.k,shH); c.globalAlpha=1;
+  c.imageSmoothingEnabled=true; c.drawImage(tex,X(0),yt,v.cylW,v.cylH);
+  c.strokeStyle=css("--ink"); c.lineWidth=1; c.strokeRect(X(0)+.5,yt+.5,v.cylW-1,v.cylH-1);
+  // rotation arrow on the left shaft
+  const ax=X(-v.mz*0.45), ar=Math.max(8,Math.min(16,v.cylH*0.3)); c.strokeStyle=css("--theory"); c.lineWidth=2; c.beginPath(); c.ellipse(ax,yc,ar*0.45,ar,0,-Math.PI*0.75,Math.PI*0.55); c.stroke();
+  const ea=Math.PI*0.55, ex=ax+ar*0.45*Math.cos(ea), ey=yc+ar*Math.sin(ea); c.fillStyle=css("--theory"); c.beginPath(); c.moveTo(ex-6,ey-1); c.lineTo(ex+3,ey+4); c.lineTo(ex-1,ey-6); c.closePath(); c.fill();
+  c.font='600 12px "IBM Plex Mono",monospace'; c.textAlign="center"; c.fillText(nf(P.N,0)+" rpm",ax,Math.min(v.H-4,yb+15));
+  // nozzle and jet
+  const nx=X(nz.z), ny0=18, ny1=58, half=Math.max(1.5,P.dX/2*v.k);
+  if(nz.firing){ c.fillStyle="rgba(240,138,75,.22)"; c.beginPath(); c.moveTo(nx-6,ny1); c.lineTo(nx+6,ny1); c.lineTo(nx+half,yt); c.lineTo(nx-half,yt); c.closePath(); c.fill();
+    if(S.playing&&!reduce){ c.fillStyle="rgba(150,60,10,.75)"; for(let i=0;i<14;i++){ const f=Math.random(), y=ny1+f*(yt-ny1), hw=6+(half-6)*f; c.beginPath(); c.arc(nx+(Math.random()*2-1)*hw,y,1.4,0,7); c.fill(); } } }
+  c.fillStyle=css("--ink"); c.beginPath(); c.moveTo(nx-13,ny0); c.lineTo(nx+13,ny0); c.lineTo(nx+6,ny1); c.lineTo(nx-6,ny1); c.closePath(); c.fill();
+  c.strokeStyle=css("--ink"); c.lineWidth=3; c.beginPath(); c.moveTo(nx,ny0); c.lineTo(nx,4); c.stroke();
+  // traverse arrow and labels
+  const d0=nz.dir; c.strokeStyle=css("--accent"); c.fillStyle=css("--accent"); c.lineWidth=2.5; const ay=ny0+14, a0=nx+d0*20, a1=nx+d0*48;
+  c.beginPath(); c.moveTo(a0,ay); c.lineTo(a1,ay); c.stroke(); c.beginPath(); c.moveTo(a1,ay); c.lineTo(a1-d0*8,ay-5); c.lineTo(a1-d0*8,ay+5); c.closePath(); c.fill();
+  c.font='600 12px "IBM Plex Mono",monospace'; c.textAlign=d0>0?"left":"right"; c.fillText("V = "+nf(P.V,1)+" mm/s",a1+d0*6,ay+4);
+  c.fillStyle=css("--muted"); c.textAlign="left"; c.font='500 11px "IBM Plex Mono",monospace';
+  c.fillText("ΔX",Math.min(nx+half+4,v.w-24),yt-6);
+}
+
+/* ---------- unrolled map ---------- */
+const mc=document.getElementById("map"), mx=mc.getContext("2d"), img=document.createElement("canvas"), ix=img.getContext("2d");
+let VM;
+function resizeMap(){
+  const w=Math.round(mc.getBoundingClientRect().width)||500, pl=48, pr=10, pt=8, pb=30;
+  const sx=(w-pl-pr)/P.L; let sy=sx, note="";
+  const maxH=520, minH=140; if(M.circ*sy>maxH){ sy=maxH/M.circ; note="vertical axis compressed (not to scale)"; } else if(M.circ*sy<minH){ sy=minH/M.circ; note="vertical axis stretched (not to scale)"; }
+  const H=Math.round(pt+M.circ*sy+pb);
+  mc.width=w*DPR; mc.height=H*DPR; mc.style.height=H+"px"; img.width=G.NZ; img.height=G.NS;
+  VM={w,H,pl,pt,sx,sy}; document.getElementById("scaleNote").textContent=note;
+}
+function paintMap(){ const NZ=G.NZ,NS=G.NS, data=ix.createImageData(NZ,NS), d=data.data;
+  for(let k=0;k<NZ*NS;k++){ const li=lutIndex(S.lam[k])*3, q=k*4; d[q]=LUT[li]; d[q+1]=LUT[li+1]; d[q+2]=LUT[li+2]; d[q+3]=255; } ix.putImageData(data,0,0); }
+function niceStep(v){ const p=Math.pow(10,Math.floor(Math.log10(v))); for(const m of [1,2,2.5,5,10]) if(m*p>=v) return m*p; return 10*p; }
+function drawMap(){
+  const v=VM, c=mx, X=z=>v.pl+z*v.sx, Y=s=>v.pt+s*v.sy; c.setTransform(DPR,0,0,DPR,0,0); c.clearRect(0,0,v.w,v.H);
+  c.imageSmoothingEnabled=false; c.drawImage(img,X(0),Y(0),P.L*v.sx,M.circ*v.sy);
+  c.strokeStyle=css("--ink"); c.lineWidth=1; c.strokeRect(X(0),Y(0),P.L*v.sx,M.circ*v.sy);
+  // central zone
+  if(P.L>3*P.dX){ c.setLineDash([5,4]); c.beginPath(); c.moveTo(X(P.dX),Y(0)); c.lineTo(X(P.dX),Y(M.circ)); c.moveTo(X(P.L-P.dX),Y(0)); c.lineTo(X(P.L-P.dX),Y(M.circ)); c.stroke(); c.setLineDash([]); }
+  // helical path of the current pass (unrolled: straight segments wrapping around s)
+  const i=Math.min(S.pass,P.n-1), ps=PLAN[i]; c.save(); c.beginPath(); c.rect(X(0),Y(0),P.L*v.sx,M.circ*v.sy); c.clip();
+  c.strokeStyle="rgba(23,32,42,.5)"; c.lineWidth=1; c.setLineDash([3,4]); c.beginPath();
+  const tTurn=M.circ/M.Vs; for(let t=-mod(ps.s0,M.circ)/M.Vs; t<M.Tp; t+=tTurn){ const a=nozzleAt(ps,Math.max(0,t)), b=nozzleAt(ps,Math.min(M.Tp,t+tTurn));
+    const sa=mod(a.s,M.circ), sb=sa+(b.s-a.s); c.moveTo(X(a.z),Y(sa)); c.lineTo(X(b.z),Y(sb)); }
+  c.stroke(); c.setLineDash([]);
+  // cross-section line
+  c.strokeStyle="#ffffff"; c.lineWidth=3; c.beginPath(); c.moveTo(X(0),Y(S.cutS)); c.lineTo(X(P.L),Y(S.cutS)); c.stroke();
+  c.strokeStyle="#000000"; c.lineWidth=1.2; c.setLineDash([5,4]); c.beginPath(); c.moveTo(X(0),Y(S.cutS)); c.lineTo(X(P.L),Y(S.cutS)); c.stroke(); c.setLineDash([]);
+  // footprint
+  if(S.pass<P.n){ const nz=curNozzle(), sn=mod(nz.s,M.circ), hz=P.dX/2, hsx=Math.min(CS.S,P.dX/2);
+    c.fillStyle="rgba(240,138,75,.3)"; c.strokeStyle=css("--accent"); c.lineWidth=2;
+    for(const off of [0,-M.circ,M.circ]){ c.fillRect(X(nz.z-hz),Y(sn+off-hsx),P.dX*v.sx,2*hsx*v.sy); c.strokeRect(X(nz.z-hz),Y(sn+off-hsx),P.dX*v.sx,2*hsx*v.sy); } }
+  c.restore();
+  // axes
+  c.fillStyle=css("--muted"); c.font='11px "IBM Plex Mono",monospace'; c.textAlign="center";
+  const stz=niceStep(P.L/6); for(let z=0;z<=P.L+1e-9;z+=stz) c.fillText(nf(z,0),X(z),Y(M.circ)+14);
+  c.fillText("z along the axis (mm)",X(P.L/2),Y(M.circ)+27);
+  c.textAlign="right"; const sts=niceStep(M.circ/6); for(let s=0;s<=M.circ+1e-9;s+=sts) c.fillText(nf(s,0),X(0)-5,Y(s)+4);
+  c.save(); c.translate(11,Y(M.circ/2)); c.rotate(-Math.PI/2); c.textAlign="center"; c.fillText("s around (mm)",0,0); c.restore();
+}
+
+/* ---------- charts ---------- */
+const SVGNS="http://www.w3.org/2000/svg";
+function el(n,a,p){ const e=document.createElementNS(SVGNS,n); for(const k in a) e.setAttribute(k,a[k]); p.appendChild(e); return e; }
+function drawXsec(){
+  const svg=document.getElementById("xsec"); svg.innerHTML="";
+  const L=46,R=46,T=12,B=34,W=560,H=250, x=u=>L+(W-L-R)*u/P.L, NZ=G.NZ, j=Math.min(G.NS-1,Math.floor(S.cutS/G.hs));
+  const lam=[],cov=[]; let lmx=1e-9; for(let i=0;i<NZ;i++){ const l=S.lam[j*NZ+i]; lam.push(l); cov.push(100*(1-Math.exp(-l))); if(l>lmx) lmx=l; }
+  const lmaxAx=niceStep(Math.max(lmx,TH.mean1*P.n*1.05)/4)*4, yc=q=>T+(H-T-B)*(1-q/100), yl=q=>T+(H-T-B)*(1-q/lmaxAx);
+  for(let k=0;k<=4;k++){ el("line",{x1:L,x2:W-R,y1:yc(k*25),y2:yc(k*25),stroke:css("--line")},svg);
+    el("text",{x:L-6,y:yc(k*25)+4,"text-anchor":"end"},svg).textContent=(k*25)+" %";
+    el("text",{x:W-R+6,y:yl(k*lmaxAx/4)+4,"text-anchor":"start"},svg).textContent=nf(k*lmaxAx/4,lmaxAx<4?1:0); }
+  if(S.last>=0 && M.p>P.L/150){ const ps=PLAN[S.last], s=S.cutS, z0=ps.dir>0? ps.ph+s*M.p/M.circ : ps.ph-s*M.p/M.circ;
+    for(let z=mod(z0,M.p); z<=P.L; z+=M.p) el("line",{x1:x(z),x2:x(z),y1:T,y2:H-B,stroke:css("--muted"),"stroke-dasharray":"2 4","stroke-opacity":.7},svg); }
+  const st=niceStep(P.L/6); for(let u=0;u<=P.L+1e-9;u+=st) el("text",{x:x(u),y:H-B+15,"text-anchor":"middle"},svg).textContent=nf(u,0);
+  el("text",{x:(L+W-R)/2,y:H-3,"text-anchor":"middle"},svg).textContent="z along the axis (mm), at s = "+nf(S.cutS,0)+" mm ("+nf(360*S.cutS/M.circ,0)+"°)";
+  const path=(arr,f,c)=>{ let d=""; arr.forEach((q,i)=>{ d+=(i?"L":"M")+x((i+.5)*G.hz).toFixed(1)+","+f(q).toFixed(1); }); el("path",{d,fill:"none",stroke:c,"stroke-width":2},svg); };
+  path(lam,yl,css("--theory")); path(cov,yc,css("--accent"));
+}
+function drawCn(){
+  const svg=document.getElementById("cn"); svg.innerHTML="";
+  const nn=n98(true), nmax=Math.max(P.n,Math.min(60,isFinite(nn)?Math.ceil(nn*1.25):60),6), L=46,R=14,T=12,B=34,W=560,H=270;
+  const x=v=>L+(W-L-R)*v/nmax, y=v=>T+(H-T-B)*(1-v/100);
+  for(let v=0;v<=100;v+=20){ el("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css("--line")},svg); el("text",{x:L-6,y:y(v)+4,"text-anchor":"end"},svg).textContent=v+" %"; }
+  const st=niceStep(nmax/8); for(let v=0;v<=nmax;v+=st) el("text",{x:x(v),y:H-B+15,"text-anchor":"middle"},svg).textContent=v;
+  el("text",{x:(L+W-R)/2,y:H-3,"text-anchor":"middle"},svg).textContent="number of passes n";
+  if(nmax>P.n) el("rect",{x:x(P.n),y:T,width:x(nmax)-x(P.n),height:H-T-B,fill:css("--soft")},svg);
+  el("line",{x1:L,x2:W-R,y1:y(98),y2:y(98),stroke:css("--bare"),"stroke-dasharray":"3 4"},svg);
+  let d1="",d2=""; for(let k=0;k<=nmax;k++){ d1+=(k?"L":"M")+x(k)+","+y(TH.cov[Math.min(k,TH.cov.length-1)]); d2+=(k?"L":"M")+x(k)+","+y(100*(1-Math.exp(-M.Kc*k))); }
+  el("path",{d:d2,fill:"none",stroke:css("--alt"),"stroke-width":2,"stroke-dasharray":"6 4"},svg);
+  el("path",{d:d1,fill:"none",stroke:css("--theory"),"stroke-width":2.4},svg);
+  for(const p of S.pts) el("circle",{cx:x(p.n),cy:y(p.cov),r:4.5,fill:css("--accent"),stroke:css("--surface"),"stroke-width":1.5},svg);
+}
+function drawCN(){
+  const svg=document.getElementById("cN"); svg.innerHTML="";
+  const L=46,R=14,T=12,B=34,W=560,H=270, x=v=>L+(W-L-R)*(v-1)/59, y=v=>T+(H-T-B)*(1-v/100);
+  for(let v=0;v<=100;v+=20){ el("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css("--line")},svg); el("text",{x:L-6,y:y(v)+4,"text-anchor":"end"},svg).textContent=v+" %"; }
+  for(const v of [1,10,20,30,40,50,60]) el("text",{x:x(v),y:H-B+15,"text-anchor":"middle"},svg).textContent=v;
+  el("text",{x:(L+W-R)/2,y:H-3,"text-anchor":"middle"},svg).textContent="rotation speed N (rpm)";
+  const Nst=Math.ceil(120*P.V/P.dX); if(Nst>1&&Nst<=60){ el("line",{x1:x(Nst),x2:x(Nst),y1:y(0),y2:y(100),stroke:css("--muted"),"stroke-dasharray":"2 4"},svg); el("text",{x:x(Nst)+4,y:y(6),"text-anchor":"start"},svg).textContent="p = ΔX/2"; }
+  let d1=""; const a1=100*(1-Math.exp(-M.Kc));
+  for(let N=1;N<=60;N+=1){ const r=lam1Arr(N,128,500,120), l=r.lam; let e=0; for(let i=0;i<l.length;i++) e+=Math.exp(-l[i]); d1+=(N>1?"L":"M")+x(N).toFixed(1)+","+y(100*(1-e/l.length)).toFixed(1); }
+  el("line",{x1:x(1),x2:x(60),y1:y(a1),y2:y(a1),stroke:css("--alt"),"stroke-width":2,"stroke-dasharray":"6 4"},svg);
+  el("path",{d:d1,fill:"none",stroke:css("--theory"),"stroke-width":2.4},svg);
+  el("circle",{cx:x(P.N),cy:y(TH.cov[1]),r:5.5,fill:css("--accent"),stroke:css("--surface"),"stroke-width":2},svg);
+  document.getElementById("cNnote").textContent="The average model does not depend on the rotation speed: one pass always spreads the same shots over the same area. Turning slowly makes a coarse helix with stripes, which costs coverage"+(P.prof==="gauss"?"; with a Gaussian jet they become negligible above N = 120·V/ΔX = "+nf(120*P.V/P.dX,1)+" rpm.":".");
+}
+
+/* ---------- texts ---------- */
+function fillTexts(){
+  const nn=n98(true), na=n98(false);
+  document.getElementById("rVs").textContent=nf(M.Vs,M.Vs<10?2:1)+" mm/s";
+  document.getElementById("rP").textContent=fmtLen(M.p);
+  document.getElementById("rA").textContent=nf(Math.atan(M.tanA)*180/Math.PI,M.tanA<0.2?2:1)+"°";
+  document.getElementById("rOv").textContent=nf(P.dX/M.p,2);
+  document.getElementById("rT").textContent=nf(M.Tp*P.N/60,1);
+  document.getElementById("rAvg").textContent=nf(100*(1-Math.exp(-M.Kc*P.n)),1)+" %";
+  document.getElementById("rStrTh").textContent=nf(TH.cov[P.n],1)+" %";
+  document.getElementById("n98").textContent=isFinite(nn)?nf(nn,1):"> 200";
+  document.getElementById("n98a").textContent=nf(na,1);
+  document.getElementById("tPass").textContent=fmtTime(M.Tp);
+  document.getElementById("tP").textContent=fmtTime(PLAN[P.n-1].tEnd);
+  document.getElementById("t98").textContent=isFinite(nn)?fmtTime(timeAfter(nn)):"–";
+  document.getElementById("c0").innerHTML=sci(M.ED3*1e18,3)+" µm³";
+  document.getElementById("c1").innerHTML=sci(M.Nd,2)+" /s";
+  document.getElementById("c2").innerHTML=sci(M.a,2)+" mm²";
+  document.getElementById("c3").textContent="p = "+fmtLen(M.p);
+  document.getElementById("c4").textContent="c = "+nf(100*CS.c,1)+" %";
+  document.getElementById("c5").textContent="K_c = "+nf(M.Kc,3);
+  document.getElementById("c6").textContent="mean "+nf(TH.mean1,2)+" / pass";
+  document.getElementById("c7").textContent=nf(100*TH.amp,1)+" %";
+  document.getElementById("c7f").innerHTML="(λ max − λ min) / λ mean along ζ. "+(P.prof==="gauss"?"Gaussian jet: ≈ 4·e^(−2π²(σ<sub>j</sub>/p)²), below 3 % for p ≤ ΔX/2.":P.prof==="flat"?"Flattened Gaussian: computed numerically; it depends on both the exponent and p.":"Uniform jet: zero only when ΔX/p is a whole number.");
+  document.getElementById("c8").textContent=P.prof==="gauss"? "N ≥ "+nf(120*P.V/P.dX,1)+" rpm" : "–";
+  document.getElementById("c9").textContent=P.seq==="bf"?"crossed helices":"stacked helices";
+  const w=document.getElementById("warn"), msgs=[];
+  if(TH.amp>0.15){ const Nmin=120*P.V/P.dX;
+    msgs.push("Visible helical stripes: λ of one pass varies by "+nf(100*TH.amp,0)+" % along the axis."+(P.prof==="gauss"? (Nmin<=60? " Turn faster than "+nf(Nmin,1)+" rpm or" : " Reduce the traverse speed below "+nf(P.dX*P.N/120,2)+" mm/s or")+" use more passes back and forth." : " Reduce the pitch p (faster rotation or slower traverse).")); }
+  if(P.prof==="uniform"&&M.p>P.dX) msgs.push("The pitch is larger than the jet: untreated helical bands remain.");
+  if(CS.curved&&CS.c<0.995) msgs.push(nf(100*(1-CS.c),1)+" % of the shots miss the cylinder: the jet is wider than the cylinder.");
+  if(!CS.curved&&halfReach()>P.R) msgs.push("The jet is wider than the cylinder: take the curvature into account to see which shots really hit it.");
+  w.textContent=msgs.join(" ");
+  const ct=TH.lmax[P.n]; lamScale=Math.max(1e-9,ct*1.05);
+  const tk=document.getElementById("ticks"); tk.innerHTML=""; const cov=viewCov();
+  for(let i=0;i<=5;i++){ const sp=document.createElement("span"); sp.textContent=cov?(i*20)+" %":nf(lamScale*i/5,lamScale<5?1:0); tk.appendChild(sp); }
+  document.getElementById("ramp").style.background="linear-gradient(90deg,"+[0.001,.1,.2,.3,.4,.5,.6,.7,.8,.9,1].map(t=>"rgb("+col(t).join(",")+")").join(",")+")";
+  updOnly();
+}
+let lastPhase="";
+function updateReads(){
+  const st=stats();
+  document.getElementById("rN").textContent=Math.min(S.pass,P.n)+" / "+P.n;
+  document.getElementById("rCov").textContent=nf(st.cov,1)+" %";
+  document.getElementById("rMM").textContent=nf(st.cmin,1)+" / "+nf(st.cmax,1)+" %";
+  document.getElementById("rLam").textContent=nf(st.lmean,2);
+  document.getElementById("rStr").textContent=st.lmean>1e-9?nf(100*(st.lmax-st.lmin)/st.lmean,1)+" %":"–";
+  let h;
+  if(S.pass>=P.n) h=`Done: <b>${nf(st.cov,1)} %</b> mean coverage in the central zone after ${P.n} pass${P.n>1?"es":""}; min ${nf(st.cmin,1)} %, max ${nf(st.cmax,1)} %.`;
+  else if(!S.playing&&S.pass===0&&S.t===0) h=`Press <b>Play</b>: the cylinder turns at ${nf(P.N,0)} rpm (surface speed ${nf(M.Vs,1)} mm/s) while the nozzle travels along the axis at ${nf(P.V,1)} mm/s. Each turn moves the jet by the pitch p = ${fmtLen(M.p)}, so the jet draws a helix with ΔX/p = ${nf(P.dX/M.p,2)} overlapping turns.`;
+  else { const ps=PLAN[S.pass], z=ps.z0+ps.dir*P.V*S.t; h=`Pass ${S.pass+1} of ${P.n} <b>(${ps.dir>0?"→":"←"})</b>, turn ${Math.floor(S.t*P.N/60)+1} of ${nf(M.Tp*P.N/60,1)}, nozzle at z = ${nf(z,1)} mm, process time ${fmtTime(ps.t0+S.t)}.`; }
+  if(h!==lastPhase){ document.getElementById("phase").innerHTML=h; lastPhase=h; }
+}
+
+/* ---------- loop ---------- */
+let last=performance.now(), frame=0, dirty=true;
+function rate(){ const v=document.getElementById("speed").value; return v==="auto"? M.Tp/10 : +v; }
+function tick(now){
+  const dt=Math.min(.05,(now-last)/1000); last=now;
+  if(S.playing && S.pass<P.n){ advance(dt*rate(),3000); dirty=true; }
+  if(dirty && (++frame%3===0)){ paintMap(); drawXsec(); updateReads(); dirty=false; }
+  draw3D(); drawMap(); if(frame%10===0) updateReads();
+  requestAnimationFrame(tick);
+}
+
+/* ---------- controls ---------- */
+const playBtn=document.getElementById("play");
+function setPlay(){ playBtn.textContent=S.playing?"❚❚ Pause":(S.pass>=P.n?"↻ Replay":"▶ Play"); }
+function restart(keep,newRandom){ if(newRandom) randPhases=[]; derive(); build(); resize3(); resizeMap(); fillTexts(); paintMap(); drawXsec(); drawCn(); drawCN(); lastPhase=""; updateReads(); S.playing=!!keep; S.stopAt=null; setPlay(); dirty=true; }
+let rT, pending=false;
+function changed(){ clearTimeout(rT); pending=true; rT=setTimeout(()=>{ pending=false; restart(S.playing); },150); }
+function flush(){ if(pending){ clearTimeout(rT); pending=false; restart(false); } }
+function ready(){ flush(); if(S.pass>=P.n) restart(false); }
+playBtn.onclick=()=>{ ready(); S.playing=!S.playing; S.stopAt=null; setPlay(); };
+document.getElementById("rev").onclick=()=>{ ready(); S.playing=true; S.stopAt="rev"; S.stopT=Math.min(M.Tp,S.t+60/P.N); setPlay(); };
+document.getElementById("pass").onclick=()=>{ ready(); S.playing=true; S.stopAt="pass"; setPlay(); };
+document.getElementById("all").onclick=()=>{ ready(); S.stopAt=null; S.playing=false; while(S.pass<P.n) advance(Infinity,Infinity); setPlay(); paintMap(); drawXsec(); updateReads(); drawCn(); };
+document.getElementById("reset").onclick=()=>restart(S.playing,true);
+document.getElementById("view").onchange=()=>{ fillTexts(); paintMap(); };
+document.getElementById("defaults").onclick=()=>{ Object.assign(P,DEF); for(const s of SPEC) sync(s); restart(false,true); };
+function mapPos(e){ const b=mc.getBoundingClientRect(); return {z:(e.clientX-b.left-VM.pl)/VM.sx, s:(e.clientY-b.top-VM.pt)/VM.sy}; }
+mc.addEventListener("mousemove",e=>{ const p=mapPos(e); if(p.z<0||p.s<0||p.z>P.L||p.s>M.circ) return;
+  const i=Math.min(G.NZ-1,Math.floor(p.z/G.hz)), j=Math.min(G.NS-1,Math.floor(p.s/G.hs)), l=S.lam[j*G.NZ+i];
+  document.getElementById("hover").textContent=`z = ${nf(p.z,1)} mm, s = ${nf(p.s,1)} mm (${nf(360*p.s/M.circ,0)}°): λ = ${nf(l,2)} impacts per point, coverage ${nf(100*(1-Math.exp(-l)),1)} %`; });
+mc.addEventListener("click",e=>{ const p=mapPos(e); if(p.z<0||p.z>P.L||p.s<0||p.s>M.circ) return; S.cutS=p.s; drawXsec(); });
+
+/* ---------- parameter inputs ---------- */
+const box=document.getElementById("params");
+function updOnly(){ for(const s of SPEC){ if(!s.only) continue; const off=P.prof!==s.only, row=document.getElementById("in-"+s.k).closest(".param");
+  row.style.opacity=off?.45:1; row.querySelectorAll("input").forEach(e=>e.disabled=off); row.title=off?"Used only with the flattened Gaussian profile":""; } }
+function sync(s){ if(s.sel){ document.getElementById("in-"+s.k).value=P[s.k]; return; } document.getElementById("rg-"+s.k).value=P[s.k]; document.getElementById("in-"+s.k).value=P[s.k]; }
+for(const s of SPEC){
+  const d=document.createElement("div"); d.className="param";
+  if(s.sel){ d.innerHTML=`<div class="row"><label for="in-${s.k}">${s.lab}</label>${s.info?`<a class="info" href="${s.info}" target="_blank" rel="noopener" title="What is the jet profile? Opens an explanation in a new window" aria-label="What is the jet profile? Opens an explanation in a new window">i</a>`:""}</div><select id="in-${s.k}">${s.sel.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join("")}</select>`;
+    box.appendChild(d); const e=d.querySelector("select"); e.value=P[s.k]; e.addEventListener("change",()=>{ P[s.k]=e.value; changed(); }); }
+  else { d.innerHTML=`<div class="row"><label for="in-${s.k}">${s.lab}</label><span class="in"><input type="number" id="in-${s.k}" min="${s.min}" max="${s.max}" step="${s.step}"><span class="u">${s.u}</span></span></div><input type="range" id="rg-${s.k}" min="${s.min}" max="${s.max}" step="${s.step}" aria-label="${s.lab}">`;
+    box.appendChild(d); const num=d.querySelector('input[type=number]'), rg=d.querySelector('input[type=range]'); num.value=P[s.k]; rg.value=P[s.k];
+    const set=v=>{ P[s.k]=v; num.value=v; rg.value=v; changed(); };
+    rg.addEventListener("input",()=>set(+rg.value));
+    num.addEventListener("change",()=>{ let v=+num.value; if(!isFinite(v)) v=P[s.k]; v=Math.max(s.min,Math.min(s.max,v)); set(v); }); }
+}
+let rz; window.addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(()=>{ resize3(); resizeMap(); paintMap(); },120); });
+restart(!reduce,true);
+requestAnimationFrame(t=>{ last=t; tick(t); });
+})();
+</script>
+
+<script data-goatcounter="https://rkubler.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body>
+</html>
