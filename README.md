@@ -39,7 +39,7 @@ https://rkubler.github.io/extended-simulator/jet_profile.html
 
 ## Coverage above 100 % (NF L 06-832)
 
-The base time is the peening time needed to dent 98 % of the surface. Full coverage (100 %) is 1.25 × the base time (an option sets it to the base time instead), and 200 % or 300 % means 2 or 3 times the time of full coverage. On an even random treatment, full coverage corresponds to λ = 1.25·ln 50 = 4.89 impacts per point on average (99.25 % dented); the local coverage level of a point is 100·λ/4.89.
+The base time is the peening time needed to dent 98 % of the surface. Full coverage (100 %) is 1.25 × the base time (an option sets it to the base time instead), and 200 % or 300 % means 2 or 3 times the time of full coverage. On an even random treatment, full coverage corresponds to λ = 1.25·ln 50 = 4.89 impacts per point on average (99.25 % dented). Coverage itself is always the dented area divided by the total area. The readout "Coverage (NF L 06-832)" combines both: it is the dented area up to the base time t_b (98 %), goes from 98 % to 100 % between t_b and 1.25·t_b, and is 100·t / (1.25·t_b) above (200 % = twice the time of full coverage).
 
 ## Validation
 
@@ -61,7 +61,11 @@ than the cylinder and surfaces with or without the curvature correction.
 
 ## Versions
 
-- 1.1 (18 November 2026): coverage above 100 % (NF L 06-832): specified coverage, base time, 1.25 factor option, local coverage level map, weakest point.
+- 1.5 (18 November 2026): readout "Min / max coverage (NF L 06-832)", which can exceed 100 %.
+- 1.4 (18 November 2026): local coverage (NF L 06-832) of each point, above 100 %, in the hover readout and as a map mode.
+- 1.3 (18 November 2026): new readout "Coverage (NF L 06-832)", which can exceed 100 %.
+- 1.2 (18 November 2026): coverage-level readouts and map removed; coverage is the dented area divided by the total area.
+- 1.1 (18 November 2026): coverage above 100 % (NF L 06-832): specified coverage, base time, 1.25 factor option.
 - 1.0 (18 November 2026): first release.
 
 Educational model. It does not replace coverage verification according to the applicable

@@ -98,7 +98,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 <div class="wrap">
 <header class="hero">
 <div class="htext">
-  <p class="byline"><b>Dr Régis Kubler</b>, Arts et Métiers Institute of Technology · Developed with the assistance of Claude Opus 5.5 (Anthropic), November 2026 · <b>Version 1.1 (18 November 2026)</b></p>
+  <p class="byline"><b>Dr Régis Kubler</b>, Arts et Métiers Institute of Technology · Developed with the assistance of Claude Opus 5.5 (Anthropic), November 2026 · <b>Version 1.5 (18 November 2026)</b></p>
   <h1>Cylinder Shot Peening Coverage Simulator</h1>
   <p>A cylinder of radius R turns at N rpm while the nozzle, aimed at its axis, travels along it at the traverse speed V. Relative to the surface, the jet draws a helix: one turn of the cylinder moves the nozzle by the pitch <span class="formula">p = 60·V/N</span>. When the pitch is large compared with the jet size ΔX, the impacts pile up in helical stripes. The page builds the map of impacts per point λ on the whole surface, then the coverage <span class="formula">τ = 100·(1 − e<sup>−λ</sup>)</span>, and compares it with the average model.</p>
 </div>
@@ -114,7 +114,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <label for="speed">Time
     <select id="speed"><option value="auto" selected>auto (1 pass ≈ 10 s)</option><option value="1">real time</option><option value="3">×3</option><option value="10">×10</option><option value="30">×30</option><option value="100">×100</option><option value="300">×300</option><option value="1000">×1000</option></select></label>
   <label for="view">Maps show
-    <select id="view"><option value="cov" selected>coverage τ (%)</option><option value="lam">impacts per point λ</option><option value="lev">local coverage level C (%)</option></select></label>
+    <select id="view"><option value="cov" selected>coverage τ (%)</option><option value="lam">impacts per point λ</option><option value="nf">coverage NF L 06-832 (%), can exceed 100 %</option></select></label>
 </div>
 
 <section class="panel" aria-label="Rotating cylinder">
@@ -156,8 +156,8 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
       <div class="read hl"><div class="k">Stripe amplitude (λ max − min) / mean</div><div class="v" id="rStr">–</div></div>
       <div class="read avg"><div class="k">Average model 100·(1 − e<sup>−K<sub>c</sub>·n</sup>)</div><div class="v" id="rAvg">–</div></div>
       <div class="read th"><div class="k">Helical stripe model</div><div class="v" id="rStrTh">–</div></div>
-      <div class="read hl"><div class="k">Coverage level reached (NF L 06-832)</div><div class="v" id="rLev">–</div></div>
-      <div class="read"><div class="k">Local coverage level min / max</div><div class="v" id="rLevMM">–</div></div>
+      <div class="read hl"><div class="k">Coverage (NF L 06-832), can exceed 100 %</div><div class="v" id="rNF">0 %</div></div>
+      <div class="read"><div class="k">Min / max coverage (NF L 06-832), can exceed 100 %</div><div class="v" id="rNFmm">–</div></div>
     </div>
     <p class="warn" id="warn"></p>
   </section>
@@ -183,8 +183,6 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
       <div class="read th"><div class="k" id="k100">Passes for 100 % = 1.25 × base</div><div class="v" id="n100">–</div></div>
       <div class="read th"><div class="k" id="kSpec">Passes for the specified coverage</div><div class="v" id="nSpec">–</div></div>
       <div class="read hl"><div class="k" id="kTSpec">Time for the specified coverage</div><div class="v" id="tSpec">–</div></div>
-      <div class="read"><div class="k">Weakest point at that time</div><div class="v" id="wSpec">–</div></div>
-      <div class="read"><div class="k" id="kWeak">Passes until the weakest point gets it</div><div class="v" id="nWeak">–</div></div>
     </div>
   </section>
   <section class="panel" aria-label="Coverage versus rotation speed">
@@ -218,7 +216,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
       <li><span class="t">Local impacts per point</span><span class="val" id="c6"></span><span class="f">Along the helical coordinate ζ = z − s·p/(2πR) (forward pass) or ζ = z + s·p/(2πR) (return pass), λ is periodic with period p: λ(ζ) = a·Ṅ·Σ<sub>k</sub> h(ζ − k·p), with the track profile h(ζ) = (1/V<sub>s</sub>)·∫ g(ζ − σ·tan α)·g<sub>s</sub>(σ) dσ.</span></li>
       <li><span class="t">Stripe amplitude, one pass</span><span class="val" id="c7"></span><span class="f" id="c7f">(λ max − λ min) / λ mean along ζ. Gaussian jet: ≈ 4·e^(−2π²(σ<sub>j</sub>/p)²), below 3 % for p ≤ ΔX/2.</span></li>
       <li><span class="t">Rotation speed without stripes</span><span class="val" id="c8"></span><span class="f">For a Gaussian jet, p ≤ ΔX/2 gives N ≥ 120·V/ΔX (rpm).</span></li>
-      <li><span class="t">Coverage above 100 % (NF L 06-832)</span><span class="val" id="c10"></span><span class="f">Base time t<sub>b</sub>: the time to dent 98 % of the surface (here from the helical stripe model). Full coverage, 100 %, is 1.25·t<sub>b</sub> (an option sets it to t<sub>b</sub> instead); a coverage C means C/100 times the time of full coverage (200 % = twice that time). On an even treatment, 1.25·t<sub>b</sub> gives λ₁₀₀ = 1.25·ln 50 = 4.89 impacts per point, 99.25 % dented (without the factor: λ₁₀₀ = ln 50 = 3.91, 98 % dented). The local coverage level compares each point with that reference: C = 100·λ/λ₁₀₀. With helical stripes the base time is longer, so the strong stripes get more than C and the weak ones less. A fraction of a pass stands for one pass with the same dose at a proportionally slower traverse speed (which would also make the helix finer).</span></li>
+      <li><span class="t">Coverage above 100 % (NF L 06-832)</span><span class="val" id="c10"></span><span class="f">Base time t<sub>b</sub>: the time to dent 98 % of the surface (here from the helical stripe model). Full coverage, 100 %, is 1.25·t<sub>b</sub> (an option sets it to t<sub>b</sub> instead); a coverage C means C/100 times the time of full coverage (200 % = twice that time). On an even treatment, 1.25·t<sub>b</sub> gives λ₁₀₀ = 1.25·ln 50 = 4.89 impacts per point, 99.25 % dented (without the factor: λ₁₀₀ = ln 50 = 3.91, 98 % dented). With helical stripes the base time is longer than on an even treatment. The readout “Coverage (NF L 06-832)” is the mean dented area up to the base time t<sub>b</sub> (98 %), goes from 98 % to 100 % between t<sub>b</sub> and 1.25·t<sub>b</sub>, and is 100·t / (1.25·t<sub>b</sub>) above. A fraction of a pass stands for one pass with the same dose at a proportionally slower traverse speed (which would also make the helix finer).</span></li>
       <li><span class="t">Back-and-forth passes</span><span class="val" id="c9"></span><span class="f">A return pass draws a helix of the opposite hand. The two families of stripes cross, λ = λ₊(ζ₊) + λ₋(ζ₋), and the mean coverage factorises: τ̄ = 1 − mean(e^(−λ₊))·mean(e^(−λ₋)). Passes in the same direction stack their helices, shifted by a phase that depends on the rotation angle at the start of each pass.</span></li>
     </ol>
   </section>
@@ -360,13 +358,17 @@ function buildTheory(){
   TH={cov,lmin,lmax,amp:me>0?(mx-mn)/me:0,mean1:me};
 }
 // passes for 98 %: interpolate −ln(uncovered fraction) between whole passes (exact without stripes)
-function n98(stripe){ if(!stripe) return Math.log(50)/M.Kc; const c=TH.cov, U=Math.log(50); let prev=0;
+function n98(stripe){ if(!stripe) return Math.log(50)/M.Kc; return nPassFor(98); }
+function nPassFor(C){ const c=TH.cov, U=-Math.log(1-C/100); let prev=0;
   for(let k=1;k<c.length;k++){ const u=-Math.log(Math.max(1e-300,1-c[k]/100)); if(u>=U) return k-1+(U-prev)/Math.max(1e-12,u-prev); prev=u; } return Infinity; }
 /* coverage above 100 % (NF L 06-832): full coverage = FF × base time (98 %) */
 const FF=()=>P.ffac==="125"?1.25:1, L100=()=>FF()*Math.log(50);
-function levMax(){ return Math.max(300,Math.ceil(P.cspec*1.5/100)*100); }
-function lminAt(n){ const a=TH.lmin, k=Math.min(a.length-2,Math.floor(n)), f=n-k; return a[k]+(a[k+1]-a[k])*f; }
-function nWeakFor(C){ const t=C/100*L100(), a=TH.lmin; for(let k=1;k<a.length;k++) if(a[k]>=t) return k-1+(t-a[k-1])/Math.max(1e-12,a[k]-a[k-1]); return Infinity; }
+// NF L 06-832 coverage: dented area up to the base time t_b (98 %), 98 -> 100 % between t_b and FF*t_b, then 100*t/(FF*t_b)
+function nfCov(x,area){ const F=FF(); if(x<=1) return area; if(F>1&&x<=F) return 98+2*(x-1)/(F-1); return 100*x/F; }
+// local coverage of a point (NF L 06-832): area 1 − e^(−λ) up to λ = ln 50 (98 %), then time-based (time ∝ λ on an even treatment)
+function locNF(l){ return nfCov(l/Math.log(50),100*(1-Math.exp(-l))); }
+let NM=200; const nfScale=()=>Math.max(100,Math.ceil(locNF(lamScale)/50)*50);
+function nForC(C){ const nb=n98(true), F=FF(); if(!isFinite(nb)) return Infinity; if(C<=98) return nPassFor(C); if(C<=100) return F>1?nb*(1+(F-1)*(C-98)/2):nb; return C/100*F*nb; }
 function timeAfter(np){ if(!isFinite(np)) return Infinity; const k=Math.floor(np), f=np-k; if(k>=PLAN.length) return Infinity;
   const tk=k>0?PLAN[k-1].tEnd:0; return f>0? PLAN[k].t0+f*M.Tp : tk; }
 
@@ -434,8 +436,8 @@ function col(v){ return v<=1e-9?[214,219,226]:turbo(0.04+0.96*v); }
 const LUT=new Uint8Array(1025*3); for(let i=0;i<=1024;i++){ const c=col(i/1024); LUT[3*i]=c[0]; LUT[3*i+1]=c[1]; LUT[3*i+2]=c[2]; }
 let lamScale=1;
 const viewCov=()=>document.getElementById("view").value==="cov";
-let VW="cov", LV=300, LL=4.89;
-function lutIndex(l){ const v=VW==="cov"?1-Math.exp(-l):VW==="lev"?Math.min(1,100*l/LL/LV):l/lamScale; return l<=1e-9?0:Math.max(1,Math.min(1024,Math.round(v*1024))); }
+let VW="cov";
+function lutIndex(l){ const v=VW==="cov"?1-Math.exp(-l):VW==="nf"?Math.min(1,locNF(l)/NM):l/lamScale; return l<=1e-9?0:Math.max(1,Math.min(1024,Math.round(v*1024))); }
 
 /* ---------- 3D side view ---------- */
 const c3=document.getElementById("c3d"), x3=c3.getContext("2d"), tex=document.createElement("canvas"), tx=tex.getContext("2d");
@@ -549,7 +551,7 @@ function drawXsec(){
 }
 function drawCn(){
   const svg=document.getElementById("cn"); svg.innerHTML="";
-  const nn=n98(true), n100=FF()*nn, nsp=P.cspec/100*n100, nmax=Math.max(P.n,Math.min(200,isFinite(nn)?Math.ceil(Math.max(n100,nsp)*1.1):60),6), L=46,R=14,T=12,B=34,W=560,H=270;
+  const nn=n98(true), n100=FF()*nn, nsp=nForC(P.cspec), nmax=Math.max(P.n,Math.min(200,isFinite(nn)?Math.ceil(Math.max(n100,nsp)*1.1):60),6), L=46,R=14,T=12,B=34,W=560,H=270;
   const x=v=>L+(W-L-R)*v/nmax, y=v=>T+(H-T-B)*(1-v/100);
   for(let v=0;v<=100;v+=20){ el("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css("--line")},svg); el("text",{x:L-6,y:y(v)+4,"text-anchor":"end"},svg).textContent=v+" %"; }
   const st=niceStep(nmax/8); for(let v=0;v<=nmax;v+=st) el("text",{x:x(v),y:H-B+15,"text-anchor":"middle"},svg).textContent=v;
@@ -612,18 +614,15 @@ function fillTexts(){
   if(CS.curved&&CS.c<0.995) msgs.push(nf(100*(1-CS.c),1)+" % of the shots miss the cylinder: the jet is wider than the cylinder.");
   if(!CS.curved&&halfReach()>P.R) msgs.push("The jet is wider than the cylinder: take the curvature into account to see which shots really hit it.");
   w.textContent=msgs.join(" ");
-  const ct=TH.lmax[P.n]; lamScale=Math.max(1e-9,ct*1.05); VW=document.getElementById("view").value; LV=levMax(); LL=L100();
+  const ct=TH.lmax[P.n]; lamScale=Math.max(1e-9,ct*1.05); NM=nfScale(); VW=document.getElementById("view").value;
   const tk=document.getElementById("ticks"); tk.innerHTML="";
-  for(let i=0;i<=5;i++){ const sp=document.createElement("span"); sp.textContent=VW==="cov"?(i*20)+" %":VW==="lev"?nf(LV*i/5,0)+" %":nf(lamScale*i/5,lamScale<5?1:0); tk.appendChild(sp); }
-  M.nb=nn; const n100=FF()*nn, nsp=P.cspec/100*n100, nw=nWeakFor(P.cspec), Cs=nf(P.cspec,0)+" %", ok=isFinite(nn);
+  for(let i=0;i<=5;i++){ const sp=document.createElement("span"); sp.textContent=VW==="cov"?(i*20)+" %":VW==="nf"?nf(NM*i/5,0)+" %":nf(lamScale*i/5,lamScale<5?1:0); tk.appendChild(sp); }
+  M.nb=nn; const n100=FF()*nn, nsp=nForC(P.cspec), Cs=nf(P.cspec,0)+" %", ok=isFinite(nn);
   document.getElementById("k100").textContent=FF()>1?"Passes for 100 % = 1.25 × base":"Passes for 100 % = base time";
   document.getElementById("n100").textContent=ok?nf(n100,1)+" ("+fmtTime(timeAfter(n100))+")":"> 200";
   document.getElementById("kSpec").textContent="Passes for C = "+Cs; document.getElementById("kTSpec").textContent="Time for C = "+Cs;
   document.getElementById("nSpec").textContent=ok?nf(nsp,1):"> 200";
   document.getElementById("tSpec").textContent=ok?fmtTime(timeAfter(nsp)):"–";
-  document.getElementById("wSpec").textContent=ok&&nsp<TH.lmin.length-1?nf(100*lminAt(nsp)/L100(),0)+" % (local level)":"–";
-  document.getElementById("kWeak").textContent="Passes until the weakest point reaches "+Cs;
-  document.getElementById("nWeak").textContent=isFinite(nw)?nf(nw,1)+" ("+fmtTime(timeAfter(nw))+")":"> 200";
   document.getElementById("c10").textContent=ok?"t(100 %) = "+fmtTime(timeAfter(n100)):"–";
   document.getElementById("ramp").style.background="linear-gradient(90deg,"+[0.001,.1,.2,.3,.4,.5,.6,.7,.8,.9,1].map(t=>"rgb("+col(t).join(",")+")").join(",")+")";
   updOnly();
@@ -636,11 +635,11 @@ function updateReads(){
   document.getElementById("rMM").textContent=nf(st.cmin,1)+" / "+nf(st.cmax,1)+" %";
   document.getElementById("rLam").textContent=nf(st.lmean,2);
   document.getElementById("rStr").textContent=st.lmean>1e-9?nf(100*(st.lmax-st.lmin)/st.lmean,1)+" %":"–";
-  const lev=isFinite(M.nb)?100*(st.lmean/M.Kc)/(FF()*M.nb):NaN;
-  document.getElementById("rLev").textContent=isFinite(lev)?nf(lev,0)+" %":"–";
-  document.getElementById("rLevMM").textContent=nf(100*st.lmin/L100(),0)+" / "+nf(100*st.lmax/L100(),0)+" %";
+  const xb=isFinite(M.nb)?(st.lmean/M.Kc)/M.nb:0, cnf=nfCov(xb,st.cov);
+  document.getElementById("rNF").textContent=isFinite(M.nb)?nf(cnf,cnf<100?1:0)+" %":nf(st.cov,1)+" %";
+  const fmtNF=v=>nf(v,v<100?1:0); document.getElementById("rNFmm").textContent=fmtNF(locNF(st.lmin))+" / "+fmtNF(locNF(st.lmax))+" %";
   let h;
-  if(S.pass>=P.n) h=`Done: <b>${nf(st.cov,1)} %</b> mean coverage in the central zone after ${P.n} pass${P.n>1?"es":""}; min ${nf(st.cmin,1)} %, max ${nf(st.cmax,1)} %. Coverage level reached: <b>${isFinite(lev)?nf(lev,0):"–"} %</b> (NF L 06-832).`;
+  if(S.pass>=P.n) h=`Done: <b>${nf(st.cov,1)} %</b> mean coverage in the central zone after ${P.n} pass${P.n>1?"es":""}; min ${nf(st.cmin,1)} %, max ${nf(st.cmax,1)} %. Coverage (NF L 06-832): <b>${nf(cnf,cnf<100?1:0)} %</b>.`;
   else if(!S.playing&&S.pass===0&&S.t===0) h=`Press <b>Play</b>: the cylinder turns at ${nf(P.N,0)} rpm (surface speed ${nf(M.Vs,1)} mm/s) while the nozzle travels along the axis at ${nf(P.V,1)} mm/s. Each turn moves the jet by the pitch p = ${fmtLen(M.p)}, so the jet draws a helix with ΔX/p = ${nf(P.dX/M.p,2)} overlapping turns.`;
   else { const ps=PLAN[S.pass], z=ps.z0+ps.dir*P.V*S.t; h=`Pass ${S.pass+1} of ${P.n} <b>(${ps.dir>0?"→":"←"})</b>, turn ${Math.floor(S.t*P.N/60)+1} of ${nf(M.Tp*P.N/60,1)}, nozzle at z = ${nf(z,1)} mm, process time ${fmtTime(ps.t0+S.t)}.`; }
   if(h!==lastPhase){ document.getElementById("phase").innerHTML=h; lastPhase=h; }
@@ -675,7 +674,7 @@ document.getElementById("defaults").onclick=()=>{ Object.assign(P,DEF); for(cons
 function mapPos(e){ const b=mc.getBoundingClientRect(); return {z:(e.clientX-b.left-VM.pl)/VM.sx, s:(e.clientY-b.top-VM.pt)/VM.sy}; }
 mc.addEventListener("mousemove",e=>{ const p=mapPos(e); if(p.z<0||p.s<0||p.z>P.L||p.s>M.circ) return;
   const i=Math.min(G.NZ-1,Math.floor(p.z/G.hz)), j=Math.min(G.NS-1,Math.floor(p.s/G.hs)), l=S.lam[j*G.NZ+i];
-  document.getElementById("hover").textContent=`z = ${nf(p.z,1)} mm, s = ${nf(p.s,1)} mm (${nf(360*p.s/M.circ,0)}°): λ = ${nf(l,2)} impacts per point, coverage ${nf(100*(1-Math.exp(-l)),1)} %, local coverage level ${nf(100*l/L100(),0)} %`; });
+  document.getElementById("hover").textContent=`z = ${nf(p.z,1)} mm, s = ${nf(p.s,1)} mm (${nf(360*p.s/M.circ,0)}°): λ = ${nf(l,2)} impacts per point, coverage ${nf(100*(1-Math.exp(-l)),1)} %, coverage (NF L 06-832) ${nf(locNF(l),locNF(l)<100?1:0)} %`; });
 mc.addEventListener("click",e=>{ const p=mapPos(e); if(p.z<0||p.z>P.L||p.s<0||p.s>M.circ) return; S.cutS=p.s; drawXsec(); });
 
 /* ---------- parameter inputs ---------- */
