@@ -36,6 +36,11 @@ stripes. The page shows the rotating cylinder, the unrolled surface map
 Jet profiles: uniform, Gaussian (σⱼ = ΔX/4) or flattened Gaussian (exponent p), see
 https://rkubler.github.io/extended-simulator/jet_profile.html
 
+
+## Coverage above 100 % (NF L 06-832)
+
+The base time is the peening time needed to dent 98 % of the surface. Full coverage (100 %) is 1.25 × the base time (an option sets it to the base time instead), and 200 % or 300 % means 2 or 3 times the time of full coverage. On an even random treatment, full coverage corresponds to λ = 1.25·ln 50 = 4.89 impacts per point on average (99.25 % dented); the local coverage level of a point is 100·λ/4.89.
+
 ## Validation
 
 The simulated mean coverage matches an independent brute-force calculation (point-sampled
@@ -52,10 +57,11 @@ than the cylinder and surfaces with or without the curvature correction.
 
 - Shot Peening Coverage Simulator (local coverage): https://rkubler.github.io/peening-coverage/
 - Extended Shot Peening Coverage Simulator (flat part, raster paths): https://rkubler.github.io/extended-simulator/
-- Home page: https://rkubler.github.io/
+- Home page: https://rkubler.github.io/shotpeening/
 
 ## Versions
 
+- 1.1 (18 November 2026): coverage above 100 % (NF L 06-832): specified coverage, base time, 1.25 factor option, local coverage level map, weakest point.
 - 1.0 (18 November 2026): first release.
 
 Educational model. It does not replace coverage verification according to the applicable
