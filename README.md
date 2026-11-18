@@ -4,6 +4,8 @@ Interactive educational simulator of shot peening coverage on a rotating cylinde
 by **Dr Régis Kubler**, Arts et Métiers Institute of Technology,
 developed with the assistance of Claude Opus 5.5 (Anthropic), November 2026.
 
+**User guide (PDF):** [cylinder_simulator_guide.pdf](docs/cylinder_simulator_guide.pdf), online at https://rkubler.github.io/cylinder-coverage/docs/cylinder_simulator_guide.pdf. LaTeX sources in [`docs/`](docs/).
+
 Live page: https://rkubler.github.io/cylinder-coverage/
 
 ## What it simulates

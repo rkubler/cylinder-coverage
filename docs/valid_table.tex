@@ -1,0 +1,16 @@
+\begin{table}[H]
+\centering\small
+\caption{Validation of the cylinder simulator: mean coverage in the central zone (\%). Media and jet $\dX=\SI{20}{mm}$ as in the reference case.}
+\label{tab:valid}
+\resizebox{\linewidth}{!}{\begin{tabular}{@{}lccccc@{}}
+\toprule
+Case & Page (simulation) & Page (stripe model) & Brute force & Average model\\ \midrule
+$R=25$, $L=150$, 24\,rpm, 8\,mm/s, 2 passes & 94.0 & 94.0 & 94.03 & 96.0\\
+$R=50$, $L=150$, 20\,rpm, 5\,mm/s, 2 passes & 92.0 & 92.0 & 92.04 & 92.4\\
+as first, uniform jet, 1 pass & 80.0 & 79.9 & 79.96 & 80.0\\
+$R=40$, 15\,rpm, 6\,mm/s, flattened $p=4$, 3 one-way & 98.2 & 98.2 & 98.16 & 98.2\\
+$R=5$, $L=100$, 2\,rpm, 10\,mm/s, 1 pass ($c=68.3\,\%$) & 48.2 & 48.1 & 48.08 & 98.8\\
+$R=10$, $L=120$, 30\,rpm, 5\,mm/s, no curvature & 100.0 & 100.0 & 100.0 & 100.0\\
+$R=200$, $L=100$, 5\,rpm, 3\,mm/s, 1 pass & 33.5 & 33.5 & 33.48 & 41.5\\ \bottomrule
+\end{tabular}}
+\end{table}
