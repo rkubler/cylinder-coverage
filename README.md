@@ -63,6 +63,12 @@ than the cylinder and surfaces with or without the curvature correction.
 
 ## Versions
 
+- 2.1 (22 November 2026): export of every figure as a PNG image (as shown at that instant) and of the data of every chart, map and table as a CSV file.
+- 2.0 (22 November 2026): shorter label for the NF L 06-832 map (no horizontal scroll on phones); θ, ψ and two nozzles checked against an independent 3D ray brute force.
+- 1.9 (22 November 2026): angle ψ tilting the nozzle plane around the axis direction: the jet no longer aims at the axis, u(s) = R[sin(s/R + ψ) − sin ψ]; cross-section view of the cylinder with the nozzle, the jet and the treated arc.
+- 1.8 (22 November 2026): option for 2 nozzles in the same plane, aimed at the same point, at angles θ₁ ≥ 0 and θ₂ ≤ 0 (flow rate per nozzle); K = K₀·[f(θ₁) + f(θ₂)]. Both nozzles are drawn in the side view.
+- 1.7 (22 November 2026): the nozzle is drawn tilted by θ in the side view, with the normal and the angle.
+- 1.6 (22 November 2026): nozzle angle θ from the normal (0 to 60°, tilted in the plane of the path and the normal) and dent-area law a = a₀·cos θ or a₀·cos²θ; the footprint is ΔX/cos θ long along the path, which smooths the helical stripes.
 - 1.5 (18 November 2026): readout "Min / max coverage (NF L 06-832)", which can exceed 100 %.
 - 1.4 (18 November 2026): local coverage (NF L 06-832) of each point, above 100 %, in the hover readout and as a map mode.
 - 1.3 (18 November 2026): new readout "Coverage (NF L 06-832)", which can exceed 100 %.

@@ -43,7 +43,7 @@ button{font:600 14px var(--f-body);border:1px solid var(--line);background:var(-
 button:hover{border-color:var(--muted)}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff;min-width:7.5em}
-select{font:500 14px var(--f-body);background:var(--soft);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+select{max-width:100%;font:500 14px var(--f-body);background:var(--soft);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
 .bar label{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
 .bar .sep{flex:1}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
@@ -98,7 +98,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 <div class="wrap">
 <header class="hero">
 <div class="htext">
-  <p class="byline"><b>Dr Régis Kubler</b>, Arts et Métiers Institute of Technology · Developed with the assistance of Claude Opus 5.5 (Anthropic), November 2026 · <b>Version 1.5 (18 November 2026)</b> · <a href="https://rkubler.github.io/cylinder-coverage/docs/cylinder_simulator_guide.pdf" target="_blank" rel="noopener">User guide (PDF)</a></p>
+  <p class="byline"><b>Dr Régis Kubler</b>, Arts et Métiers Institute of Technology · Developed with the assistance of Claude Opus 5.5 (Anthropic), November 2026 · <b>Version 2.1 (22 November 2026)</b> · <a href="https://rkubler.github.io/cylinder-coverage/docs/cylinder_simulator_guide.pdf" target="_blank" rel="noopener">User guide (PDF)</a></p>
   <h1>Cylinder Shot Peening Coverage Simulator</h1>
   <p>A cylinder of radius R turns at N rpm while the nozzle, aimed at its axis, travels along it at the traverse speed V. Relative to the surface, the jet draws a helix: one turn of the cylinder moves the nozzle by the pitch <span class="formula">p = 60·V/N</span>. When the pitch is large compared with the jet size ΔX, the impacts pile up in helical stripes. The page builds the map of impacts per point λ on the whole surface, then the coverage <span class="formula">τ = 100·(1 − e<sup>−λ</sup>)</span>, and compares it with the average model.</p>
 </div>
@@ -114,12 +114,15 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <label for="speed">Time
     <select id="speed"><option value="auto" selected>auto (1 pass ≈ 10 s)</option><option value="1">real time</option><option value="3">×3</option><option value="10">×10</option><option value="30">×30</option><option value="100">×100</option><option value="300">×300</option><option value="1000">×1000</option></select></label>
   <label for="view">Maps show
-    <select id="view"><option value="cov" selected>coverage τ (%)</option><option value="lam">impacts per point λ</option><option value="nf">coverage NF L 06-832 (%), can exceed 100 %</option></select></label>
+    <select id="view"><option value="cov" selected>coverage τ (%)</option><option value="lam">impacts per point λ</option><option value="nf">coverage NF L 06-832 (%, above 100 %)</option></select></label>
 </div>
 
 <section class="panel" aria-label="Rotating cylinder">
   <h2>Rotating cylinder seen from the side</h2>
   <canvas id="c3d" aria-label="Side view of the rotating cylinder with the nozzle and the coverage on its surface"></canvas>
+  <h2 style="margin-top:14px">Cross-section of the cylinder (angle ψ)</h2>
+  <canvas id="cxs" style="max-width:760px;margin:0 auto" aria-label="Cross-section of the cylinder with the nozzle tilted by the angle ψ and its jet"></canvas>
+  <p class="note">Section perpendicular to the axis. The nozzle plane is tilted by ψ around the direction of the traverse, so the jet no longer aims at the axis: the rays hit the curved surface at different angles, the footprint around the circumference becomes longer and asymmetric, and on small cylinders part of the jet misses. The orange arc is the treated part of the circumference; the stand-off distance is not to scale.</p>
   <div class="phase" id="phase" aria-live="polite"></div>
 </section>
 
@@ -209,7 +212,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
     <ol class="chain">
       <li><span class="t">E[D³]: mean of the cube of the shot diameter</span><span class="val" id="c0"></span><span class="f">The mass of a shot is proportional to D³, so the mean shot mass needs E[D³], the mean of D³ over all shots. Identical shots: E[D³] = D³. Log-normal sizes with mass median D₅₀: E[D³] = D₅₀³·e^(−4.5σ²).</span></li>
       <li><span class="t">Shots per second</span><span class="val" id="c1"></span><span class="f">Ṅ = ṁ / m̄ₚ, with m̄ₚ = ρ·π/6·E[D³]</span></li>
-      <li><span class="t">Area of one dent</span><span class="val" id="c2"></span><span class="f">a = π·c²·E[D²], c = r₅₀/D₅₀, E[D²] = D₅₀²·e^(−4σ²)</span></li>
+      <li><span class="t">Area of one dent</span><span class="val" id="c2"></span><span class="f">a = π·c²·E[D²]·f(γ), c = r₅₀/D₅₀, E[D²] = D₅₀²·e^(−4σ²); angle of incidence at the aim point cos γ = cos θ·cos ψ, f = cos γ or cos²γ <span id="cTh"></span>. The jet is ΔX·√(1 + tan²θ/cos²ψ) long along the axis, which smooths the helical stripes; ψ makes the jet miss the axis (cross-section view).</span></li>
       <li><span class="t">Surface speed and helix</span><span class="val" id="c3"></span><span class="f">V<sub>s</sub> = 2πR·N/60. Relative to the surface the nozzle moves at (V, V<sub>s</sub>): a helix of pitch p = V·60/N = 2πR·V/V<sub>s</sub> and angle α = atan(V/V<sub>s</sub>).</span></li>
       <li><span class="t">Shots that hit the cylinder</span><span class="val" id="c4"></span><span class="f">The jet is a parallel stream of width ΔX aimed at the axis. A shot at a distance u from the axis plane hits the surface at the arc s = R·asin(u/R); shots with |u| &gt; R miss. Density per unit arc: g<sub>s</sub>(s) = g(R·sin(s/R))·cos(s/R). Fraction that hits: c = G(R) − G(−R).</span></li>
       <li><span class="t">Average K of one pass</span><span class="val" id="c5"></span><span class="f">K<sub>c</sub> = c·a·Ṅ / (2πR·V): one pass spreads the shots of L/V seconds over the area 2πR·L. Equivalent to a flat raster with step p and line speed V<sub>s</sub>: K<sub>c</sub> = c·a·Ṅ/(V<sub>s</sub>·p). It does not depend on the rotation speed.</span></li>
@@ -230,16 +233,55 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 </div>
 
 <script>
+/* ---------- export of the figures: PNG (canvas or SVG, as shown at this instant) and CSV (data of the charts, maps and tables) ---------- */
+const EXP={data:{}, grids:{}, prefix:"sim",
+  set(id,cols,rows){ this.data[id]={cols,rows}; },             // chart data, refreshed by the drawing functions
+  grid(id,fn){ this.grids[id]=fn; },                             // map data, computed on demand: fn() -> {cols, rows}
+  stamp(){ const d=new Date(), z=n=>String(n).padStart(2,"0"); return d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+"_"+z(d.getHours())+z(d.getMinutes())+z(d.getSeconds()); },
+  save(blob,name){ const a=document.createElement("a"), u=URL.createObjectURL(blob); a.href=u; a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(u); a.remove(); },1500); },
+  bg(){ const s=getComputedStyle(document.documentElement); return (s.getPropertyValue("--surface")||s.getPropertyValue("--bg")||"#ffffff").trim()||"#ffffff"; },
+  csvText(cols,rows){ const q=v=>{ if(v===null||v===undefined||(typeof v==="number"&&!isFinite(v))) return ""; const s=typeof v==="number"?String(+v.toPrecision(8)):String(v); return /[",;\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+    return [cols.map(q).join(","), ...rows.map(r=>r.map(q).join(","))].join("\n")+"\n"; },
+  csv(id){ const d=this.grids[id]?this.grids[id]():this.data[id]; if(!d){ alert("No data yet for this figure."); return; }
+    this.save(new Blob(["﻿"+this.csvText(d.cols,d.rows)],{type:"text/csv;charset=utf-8"}), this.prefix+"_"+id+"_"+this.stamp()+".csv"); },
+  pngCanvas(cv,id){ const c=document.createElement("canvas"); c.width=cv.width; c.height=cv.height; const x=c.getContext("2d"); x.fillStyle=this.bg(); x.fillRect(0,0,c.width,c.height); x.drawImage(cv,0,0);
+    c.toBlob(b=>this.save(b,this.prefix+"_"+id+"_"+this.stamp()+".png"),"image/png"); },
+  pngSvg(svg,id){ // copy the computed styles into the clone so that the image looks like the page
+    const cl=svg.cloneNode(true), src=[svg,...svg.querySelectorAll("*")], dst=[cl,...cl.querySelectorAll("*")];
+    const props=["fill","fill-opacity","stroke","stroke-width","stroke-dasharray","stroke-opacity","opacity","font-family","font-size","font-weight","text-anchor","dominant-baseline"];
+    src.forEach((e,i)=>{ const cs=getComputedStyle(e); dst[i].setAttribute("style",props.map(p=>p+":"+cs.getPropertyValue(p)).join(";")+";"+(dst[i].getAttribute("style")||"")); });
+    const vb=svg.viewBox&&svg.viewBox.baseVal&&svg.viewBox.baseVal.width?svg.viewBox.baseVal:{width:svg.clientWidth,height:svg.clientHeight}, k=2, W=Math.round(vb.width*k), H=Math.round(vb.height*k);
+    cl.setAttribute("width",W); cl.setAttribute("height",H); cl.setAttribute("xmlns","http://www.w3.org/2000/svg");
+    const img=new Image(), u=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(cl)],{type:"image/svg+xml"}));
+    img.onload=()=>{ const c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d"); x.fillStyle=this.bg(); x.fillRect(0,0,W,H); x.drawImage(img,0,0,W,H); URL.revokeObjectURL(u);
+      c.toBlob(b=>this.save(b,this.prefix+"_"+id+"_"+this.stamp()+".png"),"image/png"); };
+    img.onerror=()=>{ URL.revokeObjectURL(u); alert("This figure could not be converted to PNG in this browser."); };
+    img.src=u; },
+  tableData(t){ const rows=[...t.querySelectorAll("tr")].map(tr=>[...tr.children].map(td=>{ const c=td.cloneNode(true); c.querySelectorAll("br").forEach(b=>b.replaceWith(" ")); return c.textContent.replace(/\s+/g," ").trim(); })); return {cols:rows[0]||[], rows:rows.slice(1)}; },
+  // add an "Export" bar under every figure listed; csv: true when the figure has data
+  init(prefix,list){ this.prefix=prefix;
+    for(const it of list){ const el=document.getElementById(it.id); if(!el) continue;
+      const bar=document.createElement("div"); bar.className="expbar";
+      const mk=(lab,fn,tip)=>{ const b=document.createElement("button"); b.type="button"; b.textContent=lab; b.title=tip; b.addEventListener("click",fn); bar.appendChild(b); };
+      bar.appendChild(Object.assign(document.createElement("span"),{textContent:"Export"}));
+      if(el.tagName==="TABLE"){ mk("CSV",()=>{ this.data[it.id]=this.tableData(el); this.csv(it.id); },"Download the table as a CSV file"); }
+      else { mk("PNG",()=>el.tagName==="CANVAS"?this.pngCanvas(el,it.id):this.pngSvg(el,it.id),"Download the figure as it is now, as a PNG image");
+        if(it.csv) mk("CSV",()=>this.csv(it.id),it.tip||"Download the data of the figure as a CSV file"); }
+      el.insertAdjacentElement("afterend",bar); }
+    const st=document.createElement("style"); st.textContent=".expbar{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin:4px 0 8px;font:500 11px var(--f-mono,monospace);color:var(--muted)}.expbar button{font:600 11px var(--f-mono,monospace);padding:2px 8px;border-radius:5px;border:1px solid var(--line);background:var(--soft);color:var(--ink);cursor:pointer}.expbar button:hover{border-color:var(--accent);color:var(--accent)}";
+    document.head.appendChild(st); }
+};
+
 (function(){
 "use strict";
 /* ---------- parameters ---------- */
-const DEF={mdot:1.5, rho:2.2, D:150, sig:0, r:10, dX:20, prof:"gauss", pexp:4, R:25, L:150, N:24, V:8, n:2, seq:"bf", phase:"motion", curv:"on", cspec:100, ffac:"125"};
+const DEF={mdot:1.5, rho:2.2, D:150, sig:0, r:10, dX:20, prof:"gauss", pexp:4, R:25, L:150, N:24, V:8, nn:"1", th:0, th2:0, psi:0, dlaw:"cos", n:2, seq:"bf", phase:"motion", curv:"on", cspec:100, ffac:"125"};
 const SPEC=[
- {k:"mdot", lab:"Media flow rate ṁ", u:"kg/min", min:0.1, max:6, step:0.1},
+ {k:"mdot", lab:"Media flow rate ṁ (per nozzle)", u:"kg/min", min:0.1, max:6, step:0.1},
  {k:"rho",  lab:"Media density ρ", u:"g/cm³", min:1, max:8, step:0.1},
  {k:"D",    lab:"Mass median diameter D₅₀", u:"µm", min:30, max:1000, step:10},
  {k:"sig",  lab:"Size spread σ (log-normal)", u:"–", min:0, max:0.6, step:0.02},
- {k:"r",    lab:"Dent radius r (for D = D₅₀)", u:"µm", min:2, max:100, step:1},
+ {k:"r",    lab:"Dent radius r (for D = D₅₀, normal impact)", u:"µm", min:2, max:100, step:1},
  {k:"dX",   lab:"Jet size ΔX", u:"mm", min:2, max:60, step:0.5},
  {k:"prof", lab:"Jet profile across the jet", info:"https://rkubler.github.io/extended-simulator/jet_profile.html", sel:[["gauss","Gaussian (σⱼ = ΔX/4)"],["flat","Flattened Gaussian (exponent p)"],["uniform","Uniform (top-hat over ΔX)"]]},
  {k:"pexp", lab:"Flatness exponent p (flattened Gaussian)", u:"–", min:2, max:20, step:0.5, only:"flat"},
@@ -247,6 +289,11 @@ const SPEC=[
  {k:"L",    lab:"Cylinder length L", u:"mm", min:20, max:1000, step:5},
  {k:"N",    lab:"Rotation speed N", u:"rpm", min:1, max:60, step:1},
  {k:"V",    lab:"Traverse speed V (along the axis)", u:"mm/s", min:0.1, max:100, step:0.1},
+ {k:"nn",   lab:"Number of nozzles (same plane, aimed at the same point)", sel:[["1","1 nozzle (angle θ₁)"],["2","2 nozzles (angles θ₁ ≥ 0 and θ₂ ≤ 0)"]]},
+ {k:"th",   lab:"Angle θ₁ of nozzle 1 from the normal (in the plane of the axis and the normal)", u:"°", min:0, max:60, step:1},
+ {k:"th2",  lab:"Angle θ₂ of nozzle 2 (tilted the other way, 2 nozzles only)", u:"°", min:-60, max:0, step:1, only:()=>P.nn==="2", onlyMsg:"Used only with 2 nozzles"},
+ {k:"psi",  lab:"Angle ψ: tilt of the nozzle plane around the axis (across the traverse)", u:"°", min:0, max:60, step:1},
+ {k:"dlaw", lab:"Dent area at angle θ", sel:[["cos","a = a₀·cos θ (dent radius ∝ √vₙ)"],["cos2","a = a₀·cos²θ (normal kinetic energy)"]]},
  {k:"n",    lab:"Number of passes n", u:"–", min:1, max:30, step:1},
  {k:"seq",  lab:"Pass sequence", sel:[["bf","Back and forth (jet always on)"],["same","Same direction, return with the jet off"]]},
  {k:"phase",lab:"Rotation angle at the start of a pass", sel:[["motion","Follows from the motion"],["random","Random at each pass"]]},
@@ -286,16 +333,32 @@ function icdf(u){ // ∫_{-∞}^{u} cdf
   if(P.prof==="uniform"){ const h=P.dX/2; if(u<=-h) return 0; if(u>=h) return u; const t=u+h; return t*t/(2*P.dX); }
   if(P.prof==="flat") return u*cdf(u) + J.H*gammaQ(2/J.p,Math.pow(Math.abs(u)/J.w,J.p));
   const s=P.dX/4, z=u/s; return s*( z*0.5*(1+erf(z/Math.SQRT2)) + Math.exp(-z*z/2)/Math.sqrt(2*Math.PI) ); }
+// one or two nozzles (same flow rate each) in the plane (axis, normal), aimed at the same point, tilted by θ₁ ≥ 0 and θ₂ ≤ 0:
+// nozzle k has its axial profile stretched by EK[k] = 1/cos θₖ and its dent area × f(θₖ). The axial profile of the
+// whole jet is the mix Σ wₖ g(z/EKₖ)/EKₖ with wₖ = f(θₖ)/Σf, and the dent area × flow is multiplied by FTH = Σ f(θₖ).
+let EZ=1, FTH=1, NN=1, ANG=[0], EK=[1], FK=[1], WK=[1];
+// ψ tilts the plane of the nozzles about the axis direction: the jet no longer aims at the cylinder axis (see buildCirc);
+// incidence at the aim point cos γ = cos θ·cos ψ; axial footprint ΔX·√(1 + tan²θ/cos²ψ)
+let PSI=0;
+function setTilt(){ NN=P.nn==="2"?2:1; ANG=NN===2?[P.th||0,P.th2||0]:[P.th||0]; PSI=(P.psi||0)*Math.PI/180; const cps=Math.cos(PSI);
+  FK=ANG.map(x=>{ const c=Math.cos(x*Math.PI/180)*cps; return P.dlaw==="cos2"?c*c:c; }); EK=ANG.map(x=>{ const tt=Math.tan(x*Math.PI/180); return Math.sqrt(1+tt*tt/(cps*cps)); });
+  FTH=FK.reduce((s,x)=>s+x,0); WK=FK.map(x=>x/FTH); EZ=Math.max(...EK); }
+const mixZ=f=>u=>{ let s=0; for(let k=0;k<EK.length;k++) s+=WK[k]*f(u,EK[k]); return s; };
+const profZ=mixZ((u,e)=>prof(u/e)/e), cdfZ=mixZ((u,e)=>cdf(u/e)), icdfZ=mixZ((u,e)=>e*icdf(u/e)), reachZ=()=>halfReach()*EZ;
 function halfReach(){ return P.prof==="uniform"? P.dX/2 : P.prof==="flat"? J.w*Math.pow(8,1/J.p) : P.dX; }
 
 /* ---------- circumferential profile on the surface (curvature) ---------- */
 let CS; // {S, c, G(σ), I(σ), g(σ)}
 function buildCirc(){
-  const R=P.R, reach=halfReach();
-  if(P.curv!=="on"){ CS={S:reach, c:1, curved:false, g:prof, G:cdf, I:icdf}; return; }
-  const umax=Math.min(reach,R), S=R*Math.asin(umax/R), G0=cdf(-R), c=cdf(R)-G0;
-  const g=s=>Math.abs(s)<Math.PI*R/2? prof(R*Math.sin(s/R))*Math.cos(s/R) : 0;
-  const Graw=s=>{ const t=Math.max(-Math.PI/2,Math.min(Math.PI/2,s/R)); return cdf(R*Math.sin(t))-G0; };
+  const R=P.R, reach=halfReach(), ps=PSI, cps=Math.cos(ps), sps=Math.sin(ps);
+  if(P.curv!=="on"){ CS={S:reach/cps, c:1, curved:false, g:s=>prof(s*cps)*cps, G:s=>cdf(s*cps), I:s=>icdf(s*cps)/cps}; return; }
+  // parallel rays tilted by ψ in the cross-section, aimed at the top point (s = 0): the ray at lateral offset u hits the
+  // surface at s with u(s) = R·[sin(s/R + ψ) − sin ψ]; flux on the surface g(u(s))·cos(s/R + ψ), visible for |s/R + ψ| < π/2
+  const uS=s=>R*(Math.sin(s/R+ps)-sps), lo=Math.max(-1,-reach/R+sps), hi=Math.min(1,reach/R+sps);
+  const sLo=R*(Math.asin(lo)-ps), sHi=R*(Math.asin(hi)-ps), S=Math.max(Math.abs(sLo),Math.abs(sHi));
+  const G0=cdf(R*(-1-sps)), c=cdf(R*(1-sps))-G0;
+  const g=s=>{ const a=s/R+ps; return Math.abs(a)<Math.PI/2? prof(uS(s))*Math.cos(a) : 0; };
+  const Graw=s=>{ const a=Math.max(-Math.PI/2,Math.min(Math.PI/2,s/R+ps)); return cdf(R*(Math.sin(a)-sps))-G0; };
   // table of the integral of G over [-S, S]
   const M=4096, hS=2*S/M, IT=new Float64Array(M+1), GT=new Float64Array(M+1);
   for(let i=0;i<=M;i++) GT[i]=Graw(-S+i*hS);
@@ -308,30 +371,30 @@ function buildCirc(){
 /* ---------- model ---------- */
 let M;
 function derive(){
-  jetConst(); buildCirc();
+  setTilt(); jetConst(); buildCirc();
   const sg=P.sig, Dm=P.D*1e-6, ED3=Math.pow(Dm,3)*Math.exp(-4.5*sg*sg), ED2=Dm*Dm*Math.exp(-4*sg*sg);
-  const mp=P.rho*1000*Math.PI/6*ED3, Nd=(P.mdot/60)/mp, cc=P.r/P.D, a=Math.PI*cc*cc*ED2*1e6;
+  const mp=P.rho*1000*Math.PI/6*ED3, Nd=(P.mdot/60)/mp, cc=P.r/P.D, a=Math.PI*cc*cc*ED2*1e6*FTH; // dent area × flow summed over the nozzles (per-nozzle flow rate)
   const circ=2*Math.PI*P.R, Vs=circ*P.N/60, p=60*P.V/P.N, tanA=P.V/Vs;
-  const ov=halfReach()+0.02*P.L, Tp=(P.L+2*ov)/P.V;
+  const ov=reachZ()+0.02*P.L, Tp=(P.L+2*ov)/P.V;
   const aN=a*Nd, Kc=CS.c*aN/(circ*P.V);
-  M={ED3,ED2,mp,Nd,a,aN,circ,Vs,p,tanA,ov,Tp,Kc,K1:aN/(P.V*P.dX)};
+  M={ED3,ED2,mp,Nd,a,aN,circ,Vs,p,tanA,ov,Tp,Kc,K1:aN/(P.V*P.dX),fth:FTH};
   M.lam1=lam1Arr(P.N,256,1601,300);
   buildPlan();
   buildTheory();
 }
 // λ of one pass along the helical coordinate ζ ∈ [0,p), for a rotation speed Nrpm
 function lam1Arr(Nrpm,NT,MH,Q){
-  const circ=2*Math.PI*P.R, Vs=circ*Nrpm/60, p=60*P.V/Nrpm, tanA=P.V/Vs, reach=halfReach(), S=CS.S;
+  const circ=2*Math.PI*P.R, Vs=circ*Nrpm/60, p=60*P.V/Nrpm, tanA=P.V/Vs, reach=reachZ(), S=CS.S;
   const Hz=reach+S*tanA, hh=2*Hz/(MH-1), H=new Float64Array(MH);
   for(let m=0;m<MH;m++){ const z=-Hz+m*hh; let sum=0;
-    if(tanA<=1){ const ds=2*S/Q; for(let q=0;q<=Q;q++){ const s=-S+q*ds, w=(q===0||q===Q)?0.5:1; sum+=w*prof(z-s*tanA)*CS.g(s); } H[m]=sum*ds/Vs; }
-    else { const du=2*reach/Q; for(let q=0;q<=Q;q++){ const u=-reach+q*du, w=(q===0||q===Q)?0.5:1; sum+=w*prof(u)*CS.g((z-u)/tanA); } H[m]=sum*du/P.V; } }
+    if(tanA<=1){ const ds=2*S/Q; for(let q=0;q<=Q;q++){ const s=-S+q*ds, w=(q===0||q===Q)?0.5:1; sum+=w*profZ(z-s*tanA)*CS.g(s); } H[m]=sum*ds/Vs; }
+    else { const du=2*reach/Q; for(let q=0;q<=Q;q++){ const u=-reach+q*du, w=(q===0||q===Q)?0.5:1; sum+=w*profZ(u)*CS.g((z-u)/tanA); } H[m]=sum*du/P.V; } }
   const hAt=z=>{ if(z<=-Hz||z>=Hz) return 0; const x=(z+Hz)/hh, i=Math.min(MH-2,Math.floor(x)), f=x-i; return H[i]*(1-f)+H[i+1]*f; };
   const lam=new Float64Array(NT), A=a_N();
   for(let i=0;i<NT;i++){ const z=(i+0.5)/NT*p; let s=0; const k0=Math.ceil((z-Hz)/p), k1=Math.floor((z+Hz)/p); for(let k=k0;k<=k1;k++) s+=hAt(z-k*p); lam[i]=A*s; }
   return {lam,p};
 }
-function a_N(){ const sg=P.sig, Dm=P.D*1e-6, ED3=Math.pow(Dm,3)*Math.exp(-4.5*sg*sg), ED2=Dm*Dm*Math.exp(-4*sg*sg), mp=P.rho*1000*Math.PI/6*ED3, cc=P.r/P.D; return Math.PI*cc*cc*ED2*1e6*(P.mdot/60)/mp; }
+function a_N(){ const sg=P.sig, Dm=P.D*1e-6, ED3=Math.pow(Dm,3)*Math.exp(-4.5*sg*sg), ED2=Dm*Dm*Math.exp(-4*sg*sg), mp=P.rho*1000*Math.PI/6*ED3, cc=P.r/P.D; return Math.PI*cc*cc*ED2*1e6*FTH*(P.mdot/60)/mp; }
 
 /* ---------- plan of the passes (also extended beyond n for the curves) ---------- */
 let PLAN=[], randPhases=[];
@@ -384,10 +447,10 @@ function build(){
 }
 function nozzleAt(ps,t){ return {z:ps.z0+ps.dir*P.V*t, s:ps.s0+M.Vs*t}; }
 function deposit(ps,ta,tb){
-  const NZ=G.NZ,NS=G.NS,hz=G.hz,hs=G.hs, A=M.aN, a=nozzleAt(ps,ta), b=nozzleAt(ps,tb), reach=halfReach(), Ss=CS.S;
+  const NZ=G.NZ,NS=G.NS,hz=G.hz,hs=G.hs, A=M.aN, a=nozzleAt(ps,ta), b=nozzleAt(ps,tb), reach=reachZ(), Ss=CS.S;
   if(M.Vs>=P.V){ // circumferential motion dominates: exact integral along s, cell average across (z)
     const zm=(a.z+b.z)/2, i0=Math.max(0,Math.floor((zm-reach)/hz)), i1=Math.min(NZ-1,Math.floor((zm+reach)/hz));
-    if(i1<i0) return; const wz=[]; for(let i=i0;i<=i1;i++) wz.push((cdf((i+1)*hz-zm)-cdf(i*hz-zm))/hz);
+    if(i1<i0) return; const wz=[]; for(let i=i0;i<=i1;i++) wz.push((cdfZ((i+1)*hz-zm)-cdfZ(i*hz-zm))/hz);
     const lo=a.s, hi=b.s, j0=Math.floor((lo-Ss)/hs), j1=Math.floor((hi+Ss)/hs), I=CS.I;
     for(let j=j0;j<=j1;j++){ const xl=j*hs, xr=(j+1)*hs;
       const w=(I(xr-lo)-I(xr-hi)-I(xl-lo)+I(xl-hi))/hs*A/M.Vs; if(w<=0) continue;
@@ -397,7 +460,7 @@ function deposit(ps,ta,tb){
     for(let j=j0;j<=j1;j++) ws.push((Gs((j+1)*hs-sm)-Gs(j*hs-sm))/hs);
     const lo=Math.min(a.z,b.z), hi=Math.max(a.z,b.z), i0=Math.max(0,Math.floor((lo-reach)/hz)), i1=Math.min(NZ-1,Math.floor((hi+reach)/hz));
     for(let i=i0;i<=i1;i++){ const xl=i*hz, xr=(i+1)*hz;
-      const w=(icdf(xr-lo)-icdf(xr-hi)-icdf(xl-lo)+icdf(xl-hi))/hz*A/P.V; if(w<=0) continue;
+      const w=(icdfZ(xr-lo)-icdfZ(xr-hi)-icdfZ(xl-lo)+icdfZ(xl-hi))/hz*A/P.V; if(w<=0) continue;
       for(let t=0;t<ws.length;t++){ if(ws[t]<=0) continue; S.lam[mod(j0+t,NS)*NZ+i]+=w*ws[t]; } }
   }
 }
@@ -420,7 +483,7 @@ function advance(dt,maxSeg){ // move the simulation forward by dt seconds of pro
 
 /* ---------- statistics (central zone: all the circumference, ends excluded by ΔX) ---------- */
 function stats(){
-  const NZ=G.NZ,NS=G.NS; let i0=Math.ceil(P.dX/G.hz), i1=Math.floor((P.L-P.dX)/G.hz)-1; if(i1<i0){ i0=0; i1=NZ-1; }
+  const NZ=G.NZ,NS=G.NS; let i0=Math.ceil(P.dX*EZ/G.hz), i1=Math.floor((P.L-P.dX*EZ)/G.hz)-1; if(i1<i0){ i0=0; i1=NZ-1; }
   let n=0,cs=0,cmin=1e9,cmax=0,ls=0,lmin=1e9,lmax=0;
   for(let j=0;j<NS;j++) for(let i=i0;i<=i1;i++){ const l=S.lam[j*NZ+i], c=1-Math.exp(-l); n++; cs+=c; ls+=l; if(c<cmin)cmin=c; if(c>cmax)cmax=c; if(l<lmin)lmin=l; if(l>lmax)lmax=l; }
   return {cov:100*cs/n,cmin:100*cmin,cmax:100*cmax,lmean:ls/n,lmin,lmax};
@@ -457,6 +520,39 @@ function resize3(){
   V3={w,H,k,top,x0,cylW,cylH,mz,rowS,shade,colI,colJ,colF,img:tx.createImageData(TW,TH)};
 }
 function curNozzle(){ const i=Math.min(S.pass,P.n-1), ps=PLAN[i], t=S.pass>=P.n?M.Tp:S.t; return Object.assign(nozzleAt(ps,t),{dir:ps.dir,firing:S.pass<P.n}); }
+/* ---------- cross-section of the cylinder: nozzle plane tilted by ψ ---------- */
+const cxs=document.getElementById("cxs");
+function drawXS(){
+  const DPRv=Math.min(2,window.devicePixelRatio||1), w=Math.round(cxs.getBoundingClientRect().width)||500, h=260;
+  if(cxs.width!==Math.round(w*DPRv)||cxs.height!==Math.round(h*DPRv)){ cxs.width=Math.round(w*DPRv); cxs.height=Math.round(h*DPRv); cxs.style.height=h+"px"; }
+  const c=cxs.getContext("2d"); c.setTransform(DPRv,0,0,DPRv,0,0); c.clearRect(0,0,w,h); c.fillStyle=css("--soft"); c.fillRect(0,0,w,h);
+  const R=P.R, ps=PSI, cps=Math.cos(ps), sps=Math.sin(ps), half=P.dX/2;
+  const Hw=Math.max(1.6*P.dX/cps, Math.min(1.1*R, 4*P.dX)), Lup=1.1*Hw, Hv=Math.min(2*R,0.8*Hw);
+  const k=Math.min(w/(2*Hw+Lup*sps)*0.95, (h-86)/(Lup*cps+Hv)), x0=w/2+Lup*sps*k/2, y0=62+Lup*cps*k, X=x=>x0+x*k, Y=y=>y0-y*k; // world: aim point (0,0), axis at (0,−R)
+  // cylinder section
+  c.fillStyle="#b9bfc6"; c.strokeStyle=css("--ink"); c.lineWidth=1.5; c.beginPath(); c.arc(X(0),Y(-R),R*k,0,2*Math.PI); c.fill(); c.stroke();
+  if(Y(-R)<h+R*k&&Y(-R)>-R*k&&R*k<h*3){ c.fillStyle=css("--ink"); c.beginPath(); c.arc(X(0),Y(-R),2.5,0,7); c.fill(); }
+  // jet: parallel rays of direction d = (sin ψ, −cos ψ), offset u along p = (cos ψ, sin ψ)
+  const d=[sps,-cps], pp=[cps,sps], firing=S.pass<P.n;
+  const hit=u=>{ const ax=u*pp[0]-Lup*d[0], ay=u*pp[1]-Lup*d[1], bx=ax, by=ay+R, B=2*(bx*d[0]+by*d[1]), Cq=bx*bx+by*by-R*R, D=B*B-4*Cq;
+    if(D<0) return {x:ax+d[0]*4*Lup, y:ay+d[1]*4*Lup, miss:true, sx:ax, sy:ay}; const t=(-B-Math.sqrt(D))/2; return {x:ax+t*d[0], y:ay+t*d[1], miss:false, sx:ax, sy:ay}; };
+  if(firing){ const N=60, pts=[]; for(let i=0;i<=N;i++) pts.push(hit(-half+2*half*i/N));
+    const ex0=X(-Lup*d[0]), ey0=Y(-Lup*d[1]), nx=pp[0]*6, ny=-pp[1]*6; // jet drawn as a cone from the nozzle exit to the surface
+    c.fillStyle="rgba(240,138,75,.25)"; c.beginPath(); c.moveTo(ex0-nx,ey0-ny); for(const q of pts) c.lineTo(X(q.x),Y(q.y)); c.lineTo(ex0+nx,ey0+ny); c.closePath(); c.fill();
+    c.strokeStyle=css("--accent"); c.lineWidth=3; c.beginPath(); let on=false; for(const q of pts){ if(q.miss){ on=false; continue; } if(!on){ c.moveTo(X(q.x),Y(q.y)); on=true; } else c.lineTo(X(q.x),Y(q.y)); } c.stroke();
+    if(S.playing&&!reduce){ c.fillStyle="rgba(150,60,10,.75)"; for(let q=0;q<14;q++){ const u=-half+2*half*Math.random(), H=hit(u), f=Math.random(); const ex0=X(-Lup*d[0]), ey0=Y(-Lup*d[1]); c.beginPath(); c.arc(ex0+(X(H.x)-ex0)*f,ey0+(Y(H.y)-ey0)*f,1.4,0,7); c.fill(); } } }
+  // nozzle (drawn at the start of the rays), its axis through the aim point
+  const ex=X(-Lup*d[0]), ey=Y(-Lup*d[1]), ang=-ps; // canvas rotation of the nozzle
+  c.save(); c.translate(ex,ey); c.rotate(ang); c.fillStyle=css("--ink"); c.beginPath(); c.moveTo(-6,0); c.lineTo(6,0); c.lineTo(14,-30); c.lineTo(-14,-30); c.closePath(); c.fill();
+  c.strokeStyle=css("--ink"); c.lineWidth=3; c.beginPath(); c.moveTo(0,-30); c.lineTo(0,-46); c.stroke(); c.restore();
+  c.strokeStyle=css("--muted"); c.lineWidth=1; c.setLineDash([3,3]); c.beginPath(); c.moveTo(X(0),Y(0)); c.lineTo(X(0),Y(Lup*cps)); c.stroke(); c.setLineDash([]);
+  c.beginPath(); c.moveTo(X(0),Y(0)); c.lineTo(X(-Lup*d[0]),Y(-Lup*d[1])); c.setLineDash([2,4]); c.stroke(); c.setLineDash([]);
+  if(ps>0.001){ c.beginPath(); c.arc(X(0),Y(0),34,-Math.PI/2-ps,-Math.PI/2); c.stroke(); }
+  c.fillStyle=css("--ink"); c.font='600 12px "IBM Plex Mono",monospace'; c.textAlign="left"; c.fillText((NN===2?"ψ (plane of the 2 nozzles) = ":"ψ = ")+nf(P.psi||0,0)+"°",X(0)+20,Math.max(14,Y(Lup*cps)+4));
+  c.fillStyle=css("--muted"); c.font='500 11px "IBM Plex Mono",monospace'; c.fillText("normal",X(0)+6,Y(0)-8);
+  const msg=P.curv!=="on"?"curvature ignored: the jet is ΔX/cos ψ = "+nf(P.dX/cps,1)+" mm wide on the surface":(CS.c<0.995?nf(100*(1-CS.c),1)+" % of the shots miss the cylinder":"all the shots hit the cylinder")+" · R = "+nf(R,0)+" mm · jet ΔX covers "+nf((()=>{ const lo=Math.max(-1,-half/R+sps), hi=Math.min(1,half/R+sps); return R*(Math.asin(hi)-Math.asin(lo)); })(),1)+" mm of the circumference";
+  c.fillStyle=css("--muted"); let fz=11; c.font='500 '+fz+'px "IBM Plex Mono",monospace'; while(fz>7&&c.measureText(msg).width>w-12){ fz-=0.5; c.font='500 '+fz+'px "IBM Plex Mono",monospace'; } c.fillText(msg,6,h-6);
+}
 function draw3D(){
   const v=V3, nz=curNozzle(), d=v.img.data, TW=tex.width, TH=tex.height, NZ=G.NZ, NS=G.NS, hs=G.hs, circ=M.circ;
   const lam=S.lam, cI=v.colI, cJ=v.colJ, cF=v.colF;
@@ -476,17 +572,31 @@ function draw3D(){
   const ea=Math.PI*0.55, ex=ax+ar*0.45*Math.cos(ea), ey=yc+ar*Math.sin(ea); c.fillStyle=css("--theory"); c.beginPath(); c.moveTo(ex-6,ey-1); c.lineTo(ex+3,ey+4); c.lineTo(ex-1,ey-6); c.closePath(); c.fill();
   c.font='600 12px "IBM Plex Mono",monospace'; c.textAlign="center"; c.fillText(nf(P.N,0)+" rpm",ax,Math.min(v.H-4,yb+15));
   // nozzle and jet
-  const nx=X(nz.z), ny0=18, ny1=58, half=Math.max(1.5,P.dX/2*v.k);
-  if(nz.firing){ c.fillStyle="rgba(240,138,75,.22)"; c.beginPath(); c.moveTo(nx-6,ny1); c.lineTo(nx+6,ny1); c.lineTo(nx+half,yt); c.lineTo(nx-half,yt); c.closePath(); c.fill();
-    if(S.playing&&!reduce){ c.fillStyle="rgba(150,60,10,.75)"; for(let i=0;i<14;i++){ const f=Math.random(), y=ny1+f*(yt-ny1), hw=6+(half-6)*f; c.beginPath(); c.arc(nx+(Math.random()*2-1)*hw,y,1.4,0,7); c.fill(); } } }
-  c.fillStyle=css("--ink"); c.beginPath(); c.moveTo(nx-13,ny0); c.lineTo(nx+13,ny0); c.lineTo(nx+6,ny1); c.lineTo(nx-6,ny1); c.closePath(); c.fill();
-  c.strokeStyle=css("--ink"); c.lineWidth=3; c.beginPath(); c.moveTo(nx,ny0); c.lineTo(nx,4); c.stroke();
+  // the nozzle is drawn tilted by θ in the plane (axis, normal); its axis meets the surface at z = nz.z
+  const nx=X(nz.z), ny0=18, ny1=58, He=yt-ny1, Ht=yt-ny0;
+  for(let k=0;k<NN;k++){
+  const half=Math.max(1.5,P.dX*EK[k]/2*v.k), th=ANG[k]*Math.PI/180, sn=Math.sin(th), cn=Math.cos(th);
+  const W=(h,w)=>[nx-h*sn+w*cn, yt-h*cn-w*sn]; // point at distance h up the nozzle axis, offset w across it
+  if(nz.firing){ const e1=W(He,-6), e2=W(He,6); c.fillStyle="rgba(240,138,75,.22)"; c.beginPath(); c.moveTo(e1[0],e1[1]); c.lineTo(e2[0],e2[1]); c.lineTo(nx+half,yt); c.lineTo(nx-half,yt); c.closePath(); c.fill();
+    if(S.playing&&!reduce){ c.fillStyle="rgba(150,60,10,.75)"; for(let i=0;i<14;i++){ const f=Math.random(), u=Math.random()*2-1, ex=e1[0]+(e2[0]-e1[0])*(u+1)/2, ey=e1[1]+(e2[1]-e1[1])*(u+1)/2, sx=nx+u*half;
+      c.beginPath(); c.arc(ex+(sx-ex)*f, ey+(yt-ey)*f, 1.4, 0, 7); c.fill(); } } }
+  const b1=W(Ht,-13), b2=W(Ht,13), b3=W(He,6), b4=W(He,-6), p0=W(Ht,0), p1=W(Ht+14,0);
+  c.fillStyle=css("--ink"); c.beginPath(); c.moveTo(b1[0],b1[1]); c.lineTo(b2[0],b2[1]); c.lineTo(b3[0],b3[1]); c.lineTo(b4[0],b4[1]); c.closePath(); c.fill();
+  c.strokeStyle=css("--ink"); c.lineWidth=3; c.beginPath(); c.moveTo(p0[0],p0[1]); c.lineTo(p1[0],p1[1]); c.stroke();
+  if(Math.abs(th)>0.001){ // normal to the surface and angle θ
+    c.strokeStyle=css("--muted"); c.lineWidth=1; c.setLineDash([3,3]); c.beginPath(); c.moveTo(nx,yt); c.lineTo(nx,ny1-6); c.stroke(); c.setLineDash([]);
+    const ra=Math.min(30,He*0.6)*(k===0?1:0.75); c.beginPath(); c.arc(nx,yt,ra,Math.min(-Math.PI/2-th,-Math.PI/2),Math.max(-Math.PI/2-th,-Math.PI/2)); c.stroke();
+    const lab=(NN===2?(k===0?"θ₁":"θ₂"):"θ")+" = "+nf(ANG[k],0)+"°", left=NN===2&&k===0;
+    c.fillStyle=css("--muted"); c.font='600 11px "IBM Plex Mono",monospace';
+    if(NN===2){ const q=W(Ht+14,0), out=ANG[k]>=0?-1:1; const tw=c.measureText(lab).width; c.textAlign=out<0?"right":"left"; c.fillText(lab,out<0?Math.max(tw+2,q[0]-6):Math.min(v.w-tw-2,q[0]+6),Math.max(12,q[1]+4)); } // next to the supply pipe of each nozzle
+    else { c.textAlign="left"; c.fillText(lab,nx+4,yt-ra-3); } }
+  }
   // traverse arrow and labels
-  if(nz.firing){ const d0=nz.dir; c.strokeStyle=css("--accent"); c.fillStyle=css("--accent"); c.lineWidth=2.5; const ay=ny0+14, a0=nx+d0*20, a1=nx+d0*48;
+  if(nz.firing){ const d0=nz.dir; c.strokeStyle=css("--accent"); c.fillStyle=css("--accent"); c.lineWidth=2.5; const ay=NN===2?10:ny0+14, a0=nx+d0*20, a1=nx+d0*48;
   c.beginPath(); c.moveTo(a0,ay); c.lineTo(a1,ay); c.stroke(); c.beginPath(); c.moveTo(a1,ay); c.lineTo(a1-d0*8,ay-5); c.lineTo(a1-d0*8,ay+5); c.closePath(); c.fill();
   c.font='600 12px "IBM Plex Mono",monospace'; c.textAlign=d0>0?"left":"right"; c.fillText("V = "+nf(P.V,1)+" mm/s",a1+d0*6,ay+4); }
   c.fillStyle=css("--muted"); c.textAlign="left"; c.font='500 11px "IBM Plex Mono",monospace';
-  c.fillText("ΔX",Math.min(nx+half+4,v.w-24),yt-6);
+  c.fillText("ΔX",Math.min(nx+Math.max(1.5,P.dX*EZ/2*v.k)+4,v.w-24),yt-6);
 }
 
 /* ---------- unrolled map ---------- */
@@ -508,7 +618,7 @@ function drawMap(){
   c.imageSmoothingEnabled=false; c.drawImage(img,X(0),Y(0),P.L*v.sx,M.circ*v.sy);
   c.strokeStyle=css("--ink"); c.lineWidth=1; c.strokeRect(X(0),Y(0),P.L*v.sx,M.circ*v.sy);
   // central zone
-  if(P.L>3*P.dX){ c.setLineDash([5,4]); c.beginPath(); c.moveTo(X(P.dX),Y(0)); c.lineTo(X(P.dX),Y(M.circ)); c.moveTo(X(P.L-P.dX),Y(0)); c.lineTo(X(P.L-P.dX),Y(M.circ)); c.stroke(); c.setLineDash([]); }
+  if(P.L>3*(P.dX*EZ)){ c.setLineDash([5,4]); c.beginPath(); c.moveTo(X((P.dX*EZ)),Y(0)); c.lineTo(X((P.dX*EZ)),Y(M.circ)); c.moveTo(X(P.L-(P.dX*EZ)),Y(0)); c.lineTo(X(P.L-(P.dX*EZ)),Y(M.circ)); c.stroke(); c.setLineDash([]); }
   // helical path of the current pass (unrolled: straight segments wrapping around s)
   const i=Math.min(S.pass,P.n-1), ps=PLAN[i]; c.save(); c.beginPath(); c.rect(X(0),Y(0),P.L*v.sx,M.circ*v.sy); c.clip();
   c.strokeStyle="rgba(23,32,42,.5)"; c.lineWidth=1; c.setLineDash([3,4]); c.beginPath();
@@ -519,9 +629,9 @@ function drawMap(){
   c.strokeStyle="#ffffff"; c.lineWidth=3; c.beginPath(); c.moveTo(X(0),Y(S.cutS)); c.lineTo(X(P.L),Y(S.cutS)); c.stroke();
   c.strokeStyle="#000000"; c.lineWidth=1.2; c.setLineDash([5,4]); c.beginPath(); c.moveTo(X(0),Y(S.cutS)); c.lineTo(X(P.L),Y(S.cutS)); c.stroke(); c.setLineDash([]);
   // footprint
-  if(S.pass<P.n){ const nz=curNozzle(), sn=mod(nz.s,M.circ), hz=P.dX/2, hsx=Math.min(CS.S,P.dX/2);
+  if(S.pass<P.n){ const nz=curNozzle(), sn=mod(nz.s,M.circ), hz=P.dX*EZ/2, hsx=Math.min(CS.S,P.dX/2);
     c.fillStyle="rgba(240,138,75,.3)"; c.strokeStyle=css("--accent"); c.lineWidth=2;
-    for(const off of [0,-M.circ,M.circ]){ c.fillRect(X(nz.z-hz),Y(sn+off-hsx),P.dX*v.sx,2*hsx*v.sy); c.strokeRect(X(nz.z-hz),Y(sn+off-hsx),P.dX*v.sx,2*hsx*v.sy); } }
+    for(const off of [0,-M.circ,M.circ]){ c.fillRect(X(nz.z-hz),Y(sn+off-hsx),2*hz*v.sx,2*hsx*v.sy); c.strokeRect(X(nz.z-hz),Y(sn+off-hsx),2*hz*v.sx,2*hsx*v.sy); } }
   c.restore();
   // axes
   c.fillStyle=css("--muted"); c.font='11px "IBM Plex Mono",monospace'; c.textAlign="center";
@@ -548,6 +658,7 @@ function drawXsec(){
   el("text",{x:(L+W-R)/2,y:H-3,"text-anchor":"middle"},svg).textContent="z along the axis (mm), at s = "+nf(S.cutS,0)+" mm ("+nf(360*S.cutS/M.circ,0)+"°)";
   const path=(arr,f,c)=>{ let d=""; arr.forEach((q,i)=>{ d+=(i?"L":"M")+x((i+.5)*G.hz).toFixed(1)+","+f(q).toFixed(1); }); el("path",{d,fill:"none",stroke:c,"stroke-width":2},svg); };
   path(lam,yl,css("--theory")); path(cov,yc,css("--accent"));
+  EXP.set("xsec",["z (mm), at s = "+nf(S.cutS,1)+" mm","impacts per point λ","coverage τ (%)"],lam.map((l,i)=>[(i+.5)*G.hz,l,cov[i]]));
 }
 function drawCn(){
   const svg=document.getElementById("cn"); svg.innerHTML="";
@@ -558,7 +669,9 @@ function drawCn(){
   el("text",{x:(L+W-R)/2,y:H-3,"text-anchor":"middle"},svg).textContent="number of passes n";
   if(nmax>P.n) el("rect",{x:x(P.n),y:T,width:x(nmax)-x(P.n),height:H-T-B,fill:css("--soft")},svg);
   el("line",{x1:L,x2:W-R,y1:y(98),y2:y(98),stroke:css("--bare"),"stroke-dasharray":"3 4"},svg);
-  let d1="",d2=""; for(let k=0;k<=nmax;k++){ d1+=(k?"L":"M")+x(k)+","+y(TH.cov[Math.min(k,TH.cov.length-1)]); d2+=(k?"L":"M")+x(k)+","+y(100*(1-Math.exp(-M.Kc*k))); }
+  let d1="",d2=""; const rowsCn=[]; for(let k=0;k<=nmax;k++){ const c=TH.cov[Math.min(k,TH.cov.length-1)], a=100*(1-Math.exp(-M.Kc*k)); d1+=(k?"L":"M")+x(k)+","+y(c); d2+=(k?"L":"M")+x(k)+","+y(a);
+    const sp=S.pts.find(q=>q.n===k); rowsCn.push([k,c,a,sp?sp.cov:null]); }
+  EXP.set("cn",["passes n","helical stripe model (%)","average model (%)","simulation (%)"],rowsCn);
   el("path",{d:d2,fill:"none",stroke:css("--alt"),"stroke-width":2,"stroke-dasharray":"6 4"},svg);
   el("path",{d:d1,fill:"none",stroke:css("--theory"),"stroke-width":2.4},svg);
   for(const p of S.pts) el("circle",{cx:x(p.n),cy:y(p.cov),r:4.5,fill:css("--accent"),stroke:css("--surface"),"stroke-width":1.5},svg);
@@ -572,9 +685,10 @@ function drawCN(){
   for(let v=0;v<=100;v+=20){ el("line",{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:css("--line")},svg); el("text",{x:L-6,y:y(v)+4,"text-anchor":"end"},svg).textContent=v+" %"; }
   for(const v of [1,10,20,30,40,50,60]) el("text",{x:x(v),y:H-B+15,"text-anchor":"middle"},svg).textContent=v;
   el("text",{x:(L+W-R)/2,y:H-3,"text-anchor":"middle"},svg).textContent="rotation speed N (rpm)";
-  const Nst=Math.ceil(120*P.V/P.dX); if(Nst>1&&Nst<=60){ el("line",{x1:x(Nst),x2:x(Nst),y1:y(0),y2:y(100),stroke:css("--muted"),"stroke-dasharray":"2 4"},svg); el("text",{x:x(Nst)+4,y:y(6),"text-anchor":"start"},svg).textContent="p = ΔX/2"; }
-  let d1=""; const a1=100*(1-Math.exp(-M.Kc));
-  for(let N=1;N<=60;N+=1){ const r=lam1Arr(N,128,500,120), l=r.lam; let e=0; for(let i=0;i<l.length;i++) e+=Math.exp(-l[i]); d1+=(N>1?"L":"M")+x(N).toFixed(1)+","+y(100*(1-e/l.length)).toFixed(1); }
+  const Nst=Math.ceil(120*P.V/(P.dX*EZ)); if(Nst>1&&Nst<=60){ el("line",{x1:x(Nst),x2:x(Nst),y1:y(0),y2:y(100),stroke:css("--muted"),"stroke-dasharray":"2 4"},svg); el("text",{x:x(Nst)+4,y:y(6),"text-anchor":"start"},svg).textContent="p = ΔX/2"; }
+  let d1=""; const a1=100*(1-Math.exp(-M.Kc)), rowsN=[];
+  for(let N=1;N<=60;N+=1){ const r=lam1Arr(N,128,500,120), l=r.lam; let e=0; for(let i=0;i<l.length;i++) e+=Math.exp(-l[i]); const cv=100*(1-e/l.length); rowsN.push([N,cv,a1]); d1+=(N>1?"L":"M")+x(N).toFixed(1)+","+y(cv).toFixed(1); }
+  EXP.set("cN",["rotation speed N (rpm)","one pass, helical stripe model (%)","one pass, average model (%)"],rowsN);
   el("line",{x1:x(1),x2:x(60),y1:y(a1),y2:y(a1),stroke:css("--alt"),"stroke-width":2,"stroke-dasharray":"6 4"},svg);
   el("path",{d:d1,fill:"none",stroke:css("--theory"),"stroke-width":2.4},svg);
   el("circle",{cx:x(P.N),cy:y(TH.cov[1]),r:5.5,fill:css("--accent"),stroke:css("--surface"),"stroke-width":2},svg);
@@ -587,7 +701,7 @@ function fillTexts(){
   document.getElementById("rVs").textContent=nf(M.Vs,M.Vs<10?2:1)+" mm/s";
   document.getElementById("rP").textContent=fmtLen(M.p);
   document.getElementById("rA").textContent=nf(Math.atan(M.tanA)*180/Math.PI,M.tanA<0.2?2:1)+"°";
-  document.getElementById("rOv").textContent=nf(P.dX/M.p,2);
+  document.getElementById("rOv").textContent=nf((P.dX*EZ)/M.p,2);
   document.getElementById("rT").textContent=nf(M.Tp*P.N/60,1);
   document.getElementById("rAvg").textContent=nf(100*(1-Math.exp(-M.Kc*P.n)),1)+" %";
   document.getElementById("rStrTh").textContent=nf(TH.cov[P.n],1)+" %";
@@ -597,20 +711,21 @@ function fillTexts(){
   document.getElementById("tP").textContent=fmtTime(PLAN[P.n-1].tEnd);
   document.getElementById("t98").textContent=isFinite(nn)?fmtTime(timeAfter(nn)):"–";
   document.getElementById("c0").innerHTML=sci(M.ED3*1e18,3)+" µm³";
-  document.getElementById("c1").innerHTML=sci(M.Nd,2)+" /s";
-  document.getElementById("c2").innerHTML=sci(M.a,2)+" mm²";
+  document.getElementById("c1").innerHTML=sci(M.Nd,2)+" /s"+(NN===2?" per nozzle":"");
+  document.getElementById("c2").innerHTML=sci(M.a/NN,2)+" mm²"+(NN===2?" (mean of the 2 nozzles)":"");
+  document.getElementById("cTh").textContent=(PSI>0?"ψ = "+nf(P.psi,0)+"°: cos γ = cos θ·cos ψ at the aim point, the jet no longer aims at the axis. ":"")+(NN===2?"(2 nozzles: f(θ₁) + f(θ₂) = "+nf(FK[0],3)+" + "+nf(FK[1],3)+" = "+nf(FTH,3)+" times one normal nozzle; jets "+nf(P.dX*EK[0],1)+" and "+nf(P.dX*EK[1],1)+" mm long along the axis; time to 98 % about × "+nf(1/FTH,2)+")":(P.th>0||PSI>0)?"(here f = "+nf(FTH,3)+", jet "+nf(P.dX*EZ,1)+" mm along the axis, time to 98 % about × "+nf(1/FTH,2)+")":"(here θ = ψ = 0°, f = 1)");
   document.getElementById("c3").textContent="p = "+fmtLen(M.p);
   document.getElementById("c4").textContent="c = "+nf(100*CS.c,1)+" %";
   document.getElementById("c5").textContent="K_c = "+nf(M.Kc,3);
   document.getElementById("c6").textContent="mean "+nf(TH.mean1,2)+" / pass";
   document.getElementById("c7").textContent=nf(100*TH.amp,1)+" %";
   document.getElementById("c7f").innerHTML="(λ max − λ min) / λ mean along ζ. "+(P.prof==="gauss"?"Gaussian jet: ≈ 4·e^(−2π²(σ<sub>j</sub>/p)²), below 3 % for p ≤ ΔX/2.":P.prof==="flat"?"Flattened Gaussian: computed numerically; it depends on both the exponent and p.":"Uniform jet: zero only when ΔX/p is a whole number.");
-  document.getElementById("c8").textContent=P.prof==="gauss"? "N ≥ "+nf(120*P.V/P.dX,1)+" rpm" : "–";
+  document.getElementById("c8").textContent=P.prof==="gauss"? "N ≥ "+nf(120*P.V/(P.dX*EZ),1)+" rpm" : "–";
   document.getElementById("c9").textContent=P.seq==="bf"?"crossed helices":"stacked helices";
   const w=document.getElementById("warn"), msgs=[];
-  if(TH.amp>0.15){ const Nmin=120*P.V/P.dX;
-    msgs.push("Visible helical stripes: λ of one pass varies by "+nf(100*TH.amp,0)+" % along the axis."+(P.prof==="gauss"? (Nmin<=60? " Turn faster than "+nf(Nmin,1)+" rpm or" : " Reduce the traverse speed below "+nf(P.dX*P.N/120,2)+" mm/s or")+" use more passes back and forth." : " Reduce the pitch p (faster rotation or slower traverse).")); }
-  if(P.prof==="uniform"&&M.p>P.dX) msgs.push("The pitch is larger than the jet: untreated helical bands remain.");
+  if(TH.amp>0.15){ const Nmin=120*P.V/(P.dX*EZ);
+    msgs.push("Visible helical stripes: λ of one pass varies by "+nf(100*TH.amp,0)+" % along the axis."+(P.prof==="gauss"? (Nmin<=60? " Turn faster than "+nf(Nmin,1)+" rpm or" : " Reduce the traverse speed below "+nf((P.dX*EZ)*P.N/120,2)+" mm/s or")+" use more passes back and forth." : " Reduce the pitch p (faster rotation or slower traverse).")); }
+  if(P.prof==="uniform"&&M.p>(P.dX*EZ)) msgs.push("The pitch is larger than the jet: untreated helical bands remain.");
   if(CS.curved&&CS.c<0.995) msgs.push(nf(100*(1-CS.c),1)+" % of the shots miss the cylinder: the jet is wider than the cylinder.");
   if(!CS.curved&&halfReach()>P.R) msgs.push("The jet is wider than the cylinder: take the curvature into account to see which shots really hit it.");
   w.textContent=msgs.join(" ");
@@ -652,7 +767,7 @@ function tick(now){
   const dt=Math.min(.05,(now-last)/1000); last=now;
   if(S.playing && S.pass<P.n){ advance(dt*rate(),3000); dirty=true; }
   if(dirty && (++frame%3===0)){ paintMap(); drawXsec(); updateReads(); dirty=false; }
-  draw3D(); drawMap(); if(frame%10===0) updateReads();
+  draw3D(); drawXS(); drawMap(); if(frame%10===0) updateReads();
   requestAnimationFrame(tick);
 }
 
@@ -680,8 +795,8 @@ mc.addEventListener("click",e=>{ const p=mapPos(e); if(p.z<0||p.z>P.L||p.s<0||p.
 /* ---------- parameter inputs ---------- */
 const box=document.getElementById("params");
 function soft(){ fillTexts(); paintMap(); drawCn(); lastPhase=""; updateReads(); }
-function updOnly(){ for(const s of SPEC){ if(!s.only) continue; const off=P.prof!==s.only, row=document.getElementById("in-"+s.k).closest(".param");
-  row.style.opacity=off?.45:1; row.querySelectorAll("input").forEach(e=>e.disabled=off); row.title=off?"Used only with the flattened Gaussian profile":""; } }
+function updOnly(){ for(const s of SPEC){ if(!s.only) continue; const off=typeof s.only==="function"?!s.only():P.prof!==s.only, row=document.getElementById("in-"+s.k).closest(".param");
+  row.style.opacity=off?.45:1; row.querySelectorAll("input").forEach(e=>e.disabled=off); row.title=off?(s.onlyMsg||"Used only with the flattened Gaussian profile"):""; } }
 function sync(s){ if(s.sel){ document.getElementById("in-"+s.k).value=P[s.k]; return; } document.getElementById("rg-"+s.k).value=P[s.k]; document.getElementById("in-"+s.k).value=P[s.k]; }
 for(const s of SPEC){
   const d=document.createElement("div"); d.className="param";
@@ -695,6 +810,10 @@ for(const s of SPEC){
 }
 let rz; window.addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(()=>{ resize3(); resizeMap(); paintMap(); },120); });
 restart(!reduce,true);
+EXP.grid("map",()=>{ const vw=document.getElementById("view").value, NZ=G.NZ, NS=G.NS, cols=["s around (mm) \\ z along the axis (mm), "+(vw==="cov"?"coverage τ (%)":vw==="nf"?"coverage NF L 06-832 (%)":"impacts per point λ")];
+  for(let i=0;i<NZ;i++) cols.push(+((i+.5)*G.hz).toFixed(3)); const rows=[];
+  for(let j=0;j<NS;j++){ const r=[+((j+.5)*G.hs).toFixed(3)]; for(let i=0;i<NZ;i++){ const l=S.lam[j*NZ+i]; r.push(vw==="cov"?100*(1-Math.exp(-l)):vw==="nf"?locNF(l):l); } rows.push(r); } return {cols,rows}; });
+EXP.init("cylinder-coverage",[{id:"c3d"},{id:"cxs"},{id:"map",csv:true,tip:"Download the unrolled map as shown (coverage, λ or NF coverage at every point) as a CSV file"},{id:"xsec",csv:true},{id:"cn",csv:true},{id:"cN",csv:true}]);
 requestAnimationFrame(t=>{ last=t; tick(t); });
 })();
 </script>
